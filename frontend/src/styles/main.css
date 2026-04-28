@@ -1,0 +1,479 @@
+:root {
+  --gg-primary: #0d6efd;
+  --gg-bg: #f5f8ff;
+  --gg-soft: #eaf1ff;
+}
+
+body {
+  background: var(--gg-bg);
+}
+
+.app-shell {
+  min-height: 100vh;
+}
+
+.hero-section {
+  background: linear-gradient(180deg, #ffffff 0%, var(--gg-soft) 100%);
+}
+
+.py-lg-6 {
+  padding-top: 5rem !important;
+  padding-bottom: 5rem !important;
+}
+
+.stat-box {
+  background: #ffffff;
+  border: 1px solid #edf2ff;
+  border-radius: 0.75rem;
+  padding: 0.75rem;
+}
+
+.login-section {
+  min-height: calc(100vh - 73px);
+}
+
+.login-shell {
+  background: #f8f9fc;
+  border: 1px solid #dfe7ff;
+  border-radius: 1rem;
+  overflow: hidden;
+  max-width: 920px;
+}
+
+.login-topbar {
+  height: 44px;
+  background: var(--gg-primary);
+  color: #fff;
+}
+
+.login-card {
+  max-width: 540px;
+  margin-top: 2rem;
+  margin-bottom: 2rem;
+  background: #fff;
+  border: 1px solid #e5ecff;
+  border-radius: 1rem;
+  overflow: hidden;
+}
+
+.login-card-head {
+  background: var(--gg-primary);
+  color: #fff;
+  padding: 1.25rem;
+}
+
+.login-avatar {
+  width: 38px;
+  height: 38px;
+  border-radius: 999px;
+  background: #fff;
+  color: var(--gg-primary);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  margin: 0 auto 0.5rem;
+}
+
+.login-card-foot {
+  border-top: 1px solid #e5ecff;
+  background: #fafbff;
+}
+
+.register-card {
+  max-width: 860px;
+  background: #fff;
+  border: 1px solid #e5ecff;
+  border-radius: 1rem;
+  overflow: hidden;
+}
+
+.register-card-sm {
+  max-width: 700px;
+}
+
+.register-card-head {
+  background: var(--gg-primary);
+  color: #fff;
+  padding: 0.9rem 1.25rem;
+}
+
+.skills-grid {
+  border: 1px solid #dfe7ff;
+  border-radius: 0.75rem;
+  background: #fafcff;
+  padding: 0.85rem;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.35rem 1rem;
+}
+
+.skills-grid .form-check {
+  margin-bottom: 0;
+  font-size: 0.95rem;
+}
+
+@media (max-width: 767px) {
+  .skills-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+.worker-dashboard {
+  min-height: calc(100vh - 73px);
+  background: #f3f6ff;
+}
+
+.worker-layout {
+  display: grid;
+  grid-template-columns: 260px 1fr;
+  min-height: calc(100vh - 73px);
+}
+
+.worker-sidebar {
+  background: var(--gg-primary);
+  color: #fff;
+  padding: 1rem 0.9rem;
+}
+
+.worker-sidebar-head {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.3rem 0.4rem 0.8rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.3);
+}
+
+.worker-logo {
+  width: 30px;
+  height: 30px;
+  border-radius: 999px;
+  background: #fff;
+  color: var(--gg-primary);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 0.75rem;
+}
+
+.worker-brand {
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+}
+
+.worker-nav {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  margin-top: 0.75rem;
+}
+
+.worker-nav-item {
+  background: transparent;
+  color: #fff;
+  border: 0;
+  border-radius: 0.5rem;
+  text-align: left;
+  padding: 0.55rem 0.7rem;
+  font-weight: 600;
+}
+
+.worker-nav-item.active,
+.worker-nav-item:hover {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+.worker-content {
+  padding: 1.2rem 1.2rem 2rem;
+}
+
+.worker-topbar {
+  background: #fff;
+  border: 1px solid #dde6ff;
+  border-radius: 0.75rem;
+  padding: 0.8rem 1rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.metric-card {
+  background: #fff;
+  border: 1px solid #dde6ff;
+  border-radius: 0.75rem;
+  padding: 0.8rem 0.9rem;
+  min-height: 100%;
+}
+
+.metric-label {
+  color: #5f6b7b;
+  font-size: 0.83rem;
+}
+
+.metric-value {
+  font-size: 1.75rem;
+  font-weight: 700;
+}
+
+.jobs-filter-panel {
+  background: #fff;
+  border: 1px solid #dde6ff;
+  border-radius: 0.75rem;
+  padding: 0.9rem;
+}
+
+.job-card {
+  background: #fff;
+  border: 1px solid #d9e4ff;
+  border-radius: 0.75rem;
+  padding: 0.9rem;
+  height: 100%;
+}
+
+.profile-card {
+  background: #fff;
+  border: 1px solid #d9e4ff;
+  border-radius: 0.75rem;
+  overflow: hidden;
+}
+
+.profile-card-head {
+  background: var(--gg-primary);
+  color: #fff;
+  font-weight: 700;
+  padding: 0.75rem 1rem;
+}
+
+.profile-avatar {
+  width: 84px;
+  height: 84px;
+  border-radius: 999px;
+  background: #ecf2ff;
+  color: var(--gg-primary);
+  font-weight: 700;
+  font-size: 2rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 2px solid #d8e3ff;
+}
+
+.profile-photo-large {
+  width: 84px;
+  height: 84px;
+  object-fit: cover;
+  border-radius: 999px;
+  border: 2px solid #d8e3ff;
+}
+
+.worker-mini-avatar {
+  width: 30px;
+  height: 30px;
+  border-radius: 999px;
+  object-fit: cover;
+  border: 2px solid #ffffff;
+  background: #ecf2ff;
+}
+
+.worker-mini-fallback {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--gg-primary);
+  font-weight: 700;
+  font-size: 0.75rem;
+}
+
+.applications-filter {
+  background: #fff;
+  border: 1px solid #d9e4ff;
+  border-radius: 0.75rem;
+  padding: 0.85rem;
+}
+
+.verification-wrap {
+  display: flex;
+  justify-content: center;
+  padding-top: 1.5rem;
+}
+
+.verification-card {
+  width: min(760px, 100%);
+  background: #fff;
+  border: 1px solid #d9e4ff;
+  border-radius: 0.75rem;
+  overflow: hidden;
+}
+
+.verification-card-head {
+  background: var(--gg-primary);
+  color: #fff;
+  font-weight: 700;
+  padding: 0.85rem 1rem;
+}
+
+.verification-note {
+  border: 1px solid #d9e4ff;
+  background: #f6f9ff;
+  border-radius: 0.6rem;
+  padding: 0.75rem;
+}
+
+.notification-card {
+  background: #fff;
+  border: 1px solid #d9e4ff;
+  border-radius: 0.75rem;
+  padding: 0.9rem 1rem;
+}
+
+.notification-card.unread {
+  border-left: 4px solid var(--gg-primary);
+  background: #f8fbff;
+}
+
+.nav-count-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 1.35rem;
+  height: 1.35rem;
+  margin-left: 0.5rem;
+  padding: 0 0.35rem;
+  border-radius: 999px;
+  background: #dc3545;
+  color: #fff;
+  font-size: 0.75rem;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.my-jobs-card {
+  background: #fff;
+  border: 1px solid #d9e4ff;
+  border-radius: 0.75rem;
+  overflow: hidden;
+}
+
+.my-jobs-list {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.job-summary-card {
+  width: 100%;
+  background: #fff;
+  border: 1px solid #d9e4ff;
+  border-radius: 0.75rem;
+  padding: 0.9rem 1rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  text-align: left;
+}
+
+.job-summary-card.active {
+  border-color: var(--gg-primary);
+  box-shadow: 0 0 0 2px rgba(13, 110, 253, 0.08);
+}
+
+.job-summary-title {
+  font-weight: 700;
+}
+
+.job-summary-meta {
+  color: #5f6b7b;
+  font-size: 0.92rem;
+}
+
+.my-jobs-card-head {
+  background: var(--gg-primary);
+  color: #fff;
+  padding: 0.7rem 0.9rem;
+}
+
+.matched-worker-item {
+  border: 1px solid #d9e4ff;
+  border-radius: 0.65rem;
+  padding: 0.55rem 0.7rem;
+  background: #fff;
+}
+
+.matched-worker-button {
+  width: 100%;
+  text-align: left;
+}
+
+.matched-worker-button:hover {
+  border-color: var(--gg-primary);
+  box-shadow: 0 0 0 2px rgba(13, 110, 253, 0.08);
+}
+
+.match-rank {
+  font-weight: 700;
+  width: 1.2rem;
+  text-align: center;
+}
+
+.match-avatar {
+  width: 42px;
+  height: 42px;
+  font-size: 1rem;
+}
+
+.distance-pill {
+  background: var(--gg-primary);
+  color: #fff;
+  border-radius: 0.6rem;
+  min-width: 92px;
+  text-align: center;
+  padding: 0.4rem 0.5rem;
+  line-height: 1.05;
+}
+
+.distance-value {
+  display: block;
+  font-weight: 700;
+  font-size: 1.05rem;
+}
+
+.distance-label {
+  display: block;
+  font-size: 0.65rem;
+  letter-spacing: 0.04em;
+}
+
+.review-item {
+  border: 1px solid #d9e4ff;
+  border-radius: 0.65rem;
+  padding: 0.85rem;
+  background: #fafcff;
+}
+
+.verification-admin-card {
+  border: 1px solid #d9e4ff;
+  border-radius: 0.75rem;
+  background: #fff;
+  padding: 1rem;
+}
+
+@media (max-width: 991px) {
+  .worker-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .worker-sidebar {
+    padding: 0.8rem;
+  }
+
+  .worker-nav {
+    flex-direction: row;
+    flex-wrap: wrap;
+  }
+
+  .worker-nav-item {
+    border: 1px solid rgba(255, 255, 255, 0.35);
+  }
+}

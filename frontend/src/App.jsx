@@ -1402,13 +1402,13 @@ export default function App() {
 
   return (
     <div className="app-shell">
-      <header className="border-bottom bg-white sticky-top">
-        <nav className="container navbar navbar-expand-lg py-3">
-          <button className="btn btn-link navbar-brand fw-bold text-primary text-decoration-none p-0" onClick={goHome}>
+      <header className="gawago-header sticky-top">
+        <nav className="container navbar navbar-expand-lg py-3 gawago-header-inner">
+          <button className="btn btn-link navbar-brand fw-bold text-decoration-none p-0 gawago-brand" onClick={goHome}>
             GawaGo
           </button>
           {view === "home" && (
-            <button className="btn btn-outline-primary btn-sm ms-auto" onClick={openLogin}>
+            <button className="btn btn-outline-light btn-sm ms-auto gawago-signin" onClick={openLogin}>
               Sign In
             </button>
           )}
@@ -1418,47 +1418,52 @@ export default function App() {
       <main>
         {view === "home" && (
           <>
-            <section className="hero-section">
-              <div className="container py-5 py-lg-6">
+            <section className="hero-section hero-dark hero-fullscreen">
+              <div className="hero-orb hero-orb-1" aria-hidden="true" />
+              <div className="hero-orb hero-orb-2" aria-hidden="true" />
+              <div className="container py-5 py-lg-6 position-relative hero-inner">
                 <div className="row align-items-center g-4">
-                  <div className="col-lg-7">
-                    <p className="text-uppercase small fw-semibold text-primary mb-2">Tayabas City</p>
-                    <h1 className="display-5 fw-bold mb-3">Find trusted helpers and skilled workers near you.</h1>
-                    <p className="lead text-muted mb-4">
+                  <div className="col-lg-7 hero-copy">
+                    <p className="text-uppercase small fw-semibold hero-kicker mb-2">Tayabas City</p>
+                    <h1 className="display-5 fw-bold mb-3 hero-title">Find trusted helpers and skilled workers near you.</h1>
+                    <p className="lead hero-subtitle mb-4">
                       GawaGo connects households and workers with smart matching, transparent rates, and a fair
                       reputation system.
                     </p>
                     <div className="d-flex gap-2 flex-wrap">
-                      <button className="btn btn-primary btn-lg">Post a Job</button>
-                      <button className="btn btn-outline-secondary btn-lg">Find Work</button>
+                      <button className="btn btn-primary btn-lg hero-primary-btn">Post a Job</button>
+                      <button className="btn btn-outline-light btn-lg hero-secondary-btn">Find Work</button>
                     </div>
                   </div>
                   <div className="col-lg-5">
-                    <div className="card shadow-sm border-0">
+                    <div className="card shadow-lg border-0 hero-snapshot">
                       <div className="card-body p-4">
-                        <h2 className="h5 fw-semibold mb-3">Live Snapshot</h2>
+                        <div className="d-flex align-items-center justify-content-between mb-3">
+                          <h2 className="h5 fw-semibold mb-0 hero-panel-title">Live Snapshot</h2>
+                          <span className="hero-live-pill">Live</span>
+                        </div>
                         <div className="row g-3">
                           <div className="col-6">
-                            <div className="stat-box">
-                              <p className="small text-muted mb-1">Open Jobs</p>
+                            <div className="stat-box hero-stat-box stat-pop stat-pop-1">
+                              <p className="small mb-1">Open Jobs</p>
                               <p className="h4 mb-0">{dashboardMetrics.openJobs}</p>
                             </div>
                           </div>
                           <div className="col-6">
-                            <div className="stat-box">
-                              <p className="small text-muted mb-1">Verified Workers</p>
+                            <div className="stat-box hero-stat-box stat-pop stat-pop-2">
+                              <p className="small mb-1">Verified Workers</p>
                               <p className="h4 mb-0">{dashboardMetrics.verifiedWorkers}</p>
                             </div>
                           </div>
                           <div className="col-6">
-                            <div className="stat-box">
-                              <p className="small text-muted mb-1">Accounts</p>
+                            <div className="stat-box hero-stat-box stat-pop stat-pop-3">
+                              <p className="small mb-1">Accounts</p>
                               <p className="h4 mb-0">{dashboardMetrics.totalAccounts}</p>
                             </div>
                           </div>
                           <div className="col-6">
-                            <div className="stat-box">
-                              <p className="small text-muted mb-1">Completed Jobs</p>
+                            <div className="stat-box hero-stat-box stat-pop stat-pop-4">
+                              <p className="small mb-1">Completed Jobs</p>
                               <p className="h4 mb-0">{dashboardMetrics.completedJobs}</p>
                             </div>
                           </div>
@@ -1470,56 +1475,21 @@ export default function App() {
               </div>
             </section>
 
-            <section className="container py-5">
-              <div className="row g-4">
-                <div className="col-md-4">
-                  <div className="card h-100 border-0 shadow-sm">
-                    <div className="card-body">
-                      <h3 className="h5">Smart Matching</h3>
-                      <p className="text-muted mb-0">
-                        Rank workers by skills, schedule, verification status, and location distance.
-                      </p>
-                    </div>
-                  </div>
-                </div>
-                <div className="col-md-4">
-                  <div className="card h-100 border-0 shadow-sm">
-                    <div className="card-body">
-                      <h3 className="h5">Trusted Hiring</h3>
-                      <p className="text-muted mb-0">
-                        Review profiles, ratings, and rates before confirming a worker.
-                      </p>
-                    </div>
-                  </div>
-                </div>
-                <div className="col-md-4">
-                  <div className="card h-100 border-0 shadow-sm">
-                    <div className="card-body">
-                      <h3 className="h5">Real-Time Updates</h3>
-                      <p className="text-muted mb-0">
-                        Track applications, confirmations, and completed jobs from one dashboard.
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </section>
           </>
         )}
 
         {view === "login" && (
           <section className="login-section py-5">
-            <div className="container">
-              <h1 className="h3 mb-3">Login</h1>
+            <div className="container login-page-wrap">
               <div className="login-shell shadow-sm">
                 <div className="login-topbar d-flex align-items-center px-3">
                   <span className="badge rounded-pill text-bg-light text-primary me-2">GG</span>
-                  <span className="small fw-semibold">GawaGo Community Platform</span>
+                  <span className="small fw-semibold">GawaGo Community Login Platform</span>
                 </div>
                 <div className="login-card mx-auto">
                   <div className="login-card-head text-center">
                     <div className="login-avatar">GG</div>
-                    <h2 className="h6 fw-bold mb-1">GawaGo Community Platform</h2>
+                    <h2 className="h6 fw-bold mb-1">GawaGo Community Login Platform</h2>
                     <p className="small text-white-50 mb-0">Connect workers and households in your community</p>
                   </div>
                   <form className="p-3 p-md-4" onSubmit={handleLoginSubmit}>
@@ -1594,7 +1564,7 @@ export default function App() {
 
         {view === "register-worker" && (
           <section className="login-section py-5">
-            <div className="container">
+            <div className="container login-page-wrap">
               <h1 className="h3 mb-3">Register as Worker</h1>
               <div className="login-shell shadow-sm">
                 <div className="login-topbar d-flex align-items-center px-3">
@@ -1790,7 +1760,7 @@ export default function App() {
 
         {view === "register-household" && (
           <section className="login-section py-5">
-            <div className="container">
+            <div className="container login-page-wrap">
               <h1 className="h3 mb-3">Register as Household</h1>
               <div className="login-shell shadow-sm">
                 <div className="login-topbar d-flex align-items-center px-3">

@@ -36,10 +36,11 @@ body {
   color: #f7fbff !important;
   font-size: 1.1rem;
   letter-spacing: 0.02em;
+  cursor: default;
 }
 
 .gawago-brand:hover {
-  color: #b9d4ff !important;
+  color: #f7fbff !important;
 }
 
 .gawago-signin {
@@ -504,6 +505,37 @@ body {
   object-fit: cover;
   border-radius: 999px;
   border: 2px solid #d8e3ff;
+}
+
+.household-profile-preview {
+  margin-top: 1rem;
+  margin-bottom: 1rem;
+  padding: 0.85rem;
+  border: 1px solid #d9e4ff;
+  border-radius: 0.65rem;
+  background: #f8fbff;
+}
+
+.household-profile-photo,
+.household-profile-fallback {
+  width: 56px;
+  height: 56px;
+  border-radius: 999px;
+  flex: 0 0 56px;
+}
+
+.household-profile-photo {
+  object-fit: cover;
+  border: 2px solid #d9e4ff;
+}
+
+.household-profile-fallback {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--gg-primary);
+  color: #fff;
+  font-weight: 700;
 }
 
 .worker-mini-avatar {

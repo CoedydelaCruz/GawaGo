@@ -33,5 +33,6 @@ class JobListCreateView(APIView):
             latitude=serializer.validated_data["latitude"],
             longitude=serializer.validated_data["longitude"],
             service_rate=serializer.validated_data["service_rate"],
+            worker_slots=serializer.validated_data["worker_slots"],
         )
         return Response(JobPostingSerializer(job).data, status=status.HTTP_201_CREATED)

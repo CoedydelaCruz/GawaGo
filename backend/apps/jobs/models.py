@@ -23,6 +23,7 @@ class JobPosting(models.Model):
     latitude = models.DecimalField(max_digits=10, decimal_places=7)
     longitude = models.DecimalField(max_digits=10, decimal_places=7)
     service_rate = models.DecimalField(max_digits=10, decimal_places=2)
+    worker_slots = models.PositiveIntegerField(default=1)
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default=STATUS_OPEN)
     created_at = models.DateTimeField(auto_now_add=True)
 

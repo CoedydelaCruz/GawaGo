@@ -1,10 +1,16 @@
+import os
 from pathlib import Path
+from dotenv import load_dotenv
 
 BASE_DIR = Path(__file__).resolve().parents[3]
 
-SECRET_KEY = "change-me"
-DEBUG = False
-ALLOWED_HOSTS = []
+# Load environment variables from .env file
+load_dotenv(BASE_DIR / ".env")
+
+SECRET_KEY = os.environ.get("DJANGO_SECRET_KEY", "change-me-for-local-development")
+
+DEBUG = os.environ.get("DJANGO_DEBUG", "False") == "True"
+ALLOWED_HOSTS = os.environ.get("DJANGO_ALLOWED_HOSTS", "").split(",")
 
 INSTALLED_APPS = [
     "django.contrib.admin",
@@ -58,17 +64,15 @@ ASGI_APPLICATION = "config.asgi.application"
 DATABASES = {
     "default": {
         "ENGINE": "django.db.backends.mysql",
-        "NAME": "gawago",
-        "USER": "root",
-        "PASSWORD": "",
-        "HOST": "127.0.0.1",
-        "PORT": "3306",
+        "NAME": os.environ.get("DB_NAME", ""),
+        "USER": os.environ.get("DB_USER", ""),
+        "PASSWORD": os.environ.get("DB_PASSWORD", ""),
+        "HOST": os.environ.get("DB_HOST", "127.0.0.1"),
+        "PORT": os.environ.get("DB_PORT", "3306"),
     }
 }
 
-CORS_ALLOWED_ORIGINS = [
-    "http://localhost:5173",
-]
+CORS_ALLOWED_ORIGINS = os.environ.get("CORS_ALLOWED_ORIGINS", "http://localhost:5173").split(",")
 
 LANGUAGE_CODE = "en-us"
 TIME_ZONE = "Asia/Manila"

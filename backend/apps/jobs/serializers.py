@@ -21,6 +21,7 @@ class JobPostingSerializer(serializers.ModelSerializer):
             "latitude",
             "longitude",
             "service_rate",
+            "worker_slots",
             "status",
             "created_at",
         ]
@@ -39,3 +40,4 @@ class JobCreateSerializer(serializers.Serializer):
     latitude = serializers.DecimalField(max_digits=10, decimal_places=7)
     longitude = serializers.DecimalField(max_digits=10, decimal_places=7)
     service_rate = serializers.DecimalField(max_digits=10, decimal_places=2)
+    worker_slots = serializers.IntegerField(min_value=1, default=1)

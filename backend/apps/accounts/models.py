@@ -1,5 +1,9 @@
 from django.contrib.auth.models import User
 from django.db import models
+from django.utils import timezone
+from django.contrib.auth.hashers import make_password, check_password
+import secrets
+from datetime import timedelta
 
 
 class UserProfile(models.Model):
@@ -34,3 +38,38 @@ class UserProfile(models.Model):
         if not self.rating_count or self.average_rating is None:
             return "No ratings yet"
         return f"{self.average_rating:.2f}"
+
+
+class PasswordResetRequest(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="password_reset_requests")
+    email = models.EmailField()
+    token_hash = models.CharField(max_length=128)
+    created_at = models.DateTimeField(auto_now_add=True)
+    expires_at = models.DateTimeField()
+    used_at = models.DateTimeField(null=True, blank=True)
+    attempts = models.PositiveIntegerField(default=0)
+
+    class Meta:
+        indexes = [models.Index(fields=["email", "created_at"])]
+
+    @property
+    def is_expired(self) -> bool:
+        return timezone.now() >= self.expires_at
+
+    @property
+    def is_used(self) -> bool:
+        return self.used_at is not None
+
+    @classmethod
+    def create_request(cls, user: User, token: str, ttl_minutes: int = 10) -> "PasswordResetRequest":
+        return cls.objects.create(
+            user=user,
+            email=user.email,
+            token_hash=make_password(token),
+            expires_at=timezone.now() + timedelta(minutes=ttl_minutes),
+        )
+
+    def verify_token(self, token: str) -> bool:
+        if self.is_expired or self.is_used:
+            return False
+        return check_password(token, self.token_hash)

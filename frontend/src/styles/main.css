@@ -762,6 +762,11 @@ body {
   min-height: 360px;
 }
 
+.household-job-map-canvas {
+  width: 100%;
+  min-height: 360px;
+}
+
 .household-job-map-placeholder {
   min-height: 360px;
   display: flex;
@@ -784,6 +789,13 @@ body {
 .household-job-map-accuracy,
 .household-job-map-coords {
   color: #4f5672;
+}
+
+.household-location-trigger + .btn-outline-secondary.active,
+.household-location-trigger + .btn-outline-secondary:focus-visible {
+  background: #eef4ff;
+  border-color: #92adff;
+  color: #1439d6;
 }
 
 .profile-card-head {
@@ -1272,6 +1284,7 @@ body {
 
   .household-job-map-frame,
   .household-job-map-frame iframe,
+  .household-job-map-canvas,
   .household-job-map-placeholder {
     min-height: 280px;
   }

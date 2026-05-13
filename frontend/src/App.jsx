@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { apiRequest, clearAuthToken, getApiBaseUrl, getAuthToken, setAuthToken, setUnauthorizedHandler } from "./api/apiClient";
 const SKILLS = ["House Cleaning", "Cooking", "Laundry", "Childcare", "Elder Care", "Gardening", "Electrical Work", "Plumbing", "Carpentry", "Painting", "Aircon Repair/Cleaning", "Welding", "Driving", "Other"];
 const BARANGAYS = ["Alitao", "Anos", "Ayaas", "Baguio", "Bakal", "Bucal", "Bulkan", "Calumpang", "Camaysa", "Dapdap", "Del Rosario", "Gibanga", "Ilasan", "Isabang", "Lalo", "Lita", "Mateuna", "Mayowe", "Opias", "Palale", "Piis", "Rizaliana", "San Diego", "San Isidro", "San Roque", "Talolong", "Tongko", "Wakas", "Poblacion"];
@@ -17,6 +17,7 @@ const OPENROUTESERVICE_API_KEY = import.meta.env.VITE_OPENROUTESERVICE_API_KEY |
 const OPENROUTESERVICE_SEARCH_URL = import.meta.env.VITE_OPENROUTESERVICE_SEARCH_URL || "https://api.openrouteservice.org/geocode/search";
 const OPENROUTESERVICE_REVERSE_URL = import.meta.env.VITE_OPENROUTESERVICE_REVERSE_URL || "https://api.openrouteservice.org/geocode/reverse";
 const TAYABAS_CITY_CENTER = { latitude: 13.9411, longitude: 121.5874 };
+let leafletAssetsPromise = null;
 async function readResponseData(response) {
   const contentType = response.headers.get("content-type") || "";
   if (response.status === 204) {
@@ -199,6 +200,39 @@ function getOpenRouteServiceHeaders() {
   } : {
     Accept: "application/json, application/geo+json",
   };
+}
+async function loadLeafletAssets() {
+  if (typeof window === "undefined") {
+    return null;
+  }
+  if (window.L) {
+    return window.L;
+  }
+  if (!leafletAssetsPromise) {
+    leafletAssetsPromise = new Promise((resolve, reject) => {
+      if (!document.querySelector('link[data-leaflet-runtime="true"]')) {
+        const stylesheet = document.createElement("link");
+        stylesheet.rel = "stylesheet";
+        stylesheet.href = "https://unpkg.com/leaflet@1.9.4/dist/leaflet.css";
+        stylesheet.dataset.leafletRuntime = "true";
+        document.head.appendChild(stylesheet);
+      }
+      const existingScript = document.querySelector('script[data-leaflet-runtime="true"]');
+      if (existingScript) {
+        existingScript.addEventListener("load", () => resolve(window.L), { once: true });
+        existingScript.addEventListener("error", () => reject(new Error("Unable to load Leaflet map assets.")), { once: true });
+        return;
+      }
+      const script = document.createElement("script");
+      script.src = "https://unpkg.com/leaflet@1.9.4/dist/leaflet.js";
+      script.async = true;
+      script.dataset.leafletRuntime = "true";
+      script.onload = () => resolve(window.L);
+      script.onerror = () => reject(new Error("Unable to load Leaflet map assets."));
+      document.body.appendChild(script);
+    });
+  }
+  return leafletAssetsPromise;
 }
 function normalizeGeocodedAddress(address = {}, fallbackBarangay = "", fallbackStreetAddress = "") {
   const barangay = address.neighbourhood || address.borough || address.suburb || address.quarter || address.locality || address.county || fallbackBarangay || "";
@@ -806,6 +840,9 @@ function App() {
   const [matchedWorkersByJob, setMatchedWorkersByJob] = useState({});
   const [householdJobCoordinates, setHouseholdJobCoordinates] = useState(null);
   const [householdJobLocationPreview, setHouseholdJobLocationPreview] = useState(null);
+  const [householdJobMapMode, setHouseholdJobMapMode] = useState("preview");
+  const householdJobMapRef = useRef(null);
+  const householdJobMapContainerIdRef = useRef(`household-job-map-${Math.random().toString(36).slice(2)}`);
   const backendCurrentWorker = normalizeBackendWorker(currentUser);
   const localCurrentWorker = registeredWorkers.find((item) => item.username === currentUser?.username) || null;
   const currentWorkerRequestFromProfile = normalizeVerificationRequest(currentUser?.profile?.verification_request);
@@ -1115,23 +1152,37 @@ function App() {
     button.className = "btn btn-primary btn-sm household-location-trigger";
     button.textContent = householdJobCoordinates?.latitude != null && householdJobCoordinates?.longitude != null ? "Location Ready" : "Use My Current Location";
 
+    const manualButton = document.createElement("button");
+    manualButton.type = "button";
+    manualButton.className = `btn btn-outline-secondary btn-sm ${householdJobMapMode === "manual" ? "active" : ""}`;
+    manualButton.textContent = householdJobMapMode === "manual" ? "Click the Map to Pin" : "Pin on Map Manually";
+
+    const actions = document.createElement("div");
+    actions.className = "d-flex gap-2 flex-wrap";
+
     const helper = document.createElement("p");
     helper.className = "form-text mb-0 household-location-helper";
-    helper.textContent = householdJobCoordinates?.latitude != null && householdJobCoordinates?.longitude != null ? `Current coordinates saved for this job: ${householdJobCoordinates.latitude}, ${householdJobCoordinates.longitude}` : "Capture your current browser location or estimate from the barangay and street so smart matching can calculate worker distance correctly.";
+    helper.textContent = householdJobMapMode === "manual" ? "Manual pin mode is active. Click on the map to place the exact job location and auto-fill the address." : householdJobCoordinates?.latitude != null && householdJobCoordinates?.longitude != null ? `Current coordinates saved for this job: ${householdJobCoordinates.latitude}, ${householdJobCoordinates.longitude}` : "Capture your current browser location or estimate from the barangay and street so smart matching can calculate worker distance correctly.";
 
     const handleClick = async () => {
       await captureHouseholdJobLocation();
     };
+    const handleManualClick = () => {
+      setHouseholdJobMapMode((prev) => prev === "manual" ? "preview" : "manual");
+    };
 
     button.addEventListener("click", handleClick);
-    buttonWrap.append(button, helper);
+    manualButton.addEventListener("click", handleManualClick);
+    actions.append(button, manualButton);
+    buttonWrap.append(actions, helper);
     streetWrap.parentElement.append(buttonWrap);
 
     return () => {
       button.removeEventListener("click", handleClick);
+      manualButton.removeEventListener("click", handleManualClick);
       buttonWrap.remove();
     };
-  }, [view, householdJobCoordinates?.latitude, householdJobCoordinates?.longitude]);
+  }, [view, householdJobCoordinates?.latitude, householdJobCoordinates?.longitude, householdJobMapMode]);
   useEffect(() => {
     if (view !== "household-post-job") {
       return;
@@ -1153,11 +1204,11 @@ function App() {
 
     const heading = document.createElement("p");
     heading.className = "household-job-map-eyebrow mb-2";
-    heading.textContent = householdJobLocationPreview?.source === "device" ? "Current Location Preview" : householdJobLocationPreview?.source === "address" ? "Address-based Preview" : "Philippines Map Preview";
+    heading.textContent = householdJobLocationPreview?.source === "device" ? "Current Location Preview" : householdJobLocationPreview?.source === "address" ? "Address-based Preview" : householdJobLocationPreview?.source === "manual" ? "Manual Pin Preview" : "Philippines Map Preview";
 
     const title = document.createElement("h3");
     title.className = "household-job-map-title mb-2";
-    title.textContent = householdJobLocationPreview?.mapUrl ? "Check the saved job pin before posting" : "The map starts at the Philippines, then drops a pin after location capture";
+    title.textContent = householdJobLocationPreview?.mapUrl ? "Check the saved job pin before posting" : householdJobMapMode === "manual" ? "Manual pin mode is active" : "The map starts at the Philippines, then drops a pin after location capture";
 
     const address = document.createElement("p");
     address.className = "small text-muted mb-2";
@@ -1169,31 +1220,14 @@ function App() {
 
     const accuracy = document.createElement("p");
     accuracy.className = "small mb-3 household-job-map-accuracy";
-    accuracy.textContent = householdJobLocationPreview?.accuracy ? `Reported device accuracy: about ${Math.round(householdJobLocationPreview.accuracy)} meters` : "Map opens at the Philippines by default and adds a pin after you confirm location.";
+    accuracy.textContent = householdJobLocationPreview?.accuracy ? `Reported device accuracy: about ${Math.round(householdJobLocationPreview.accuracy)} meters` : householdJobMapMode === "manual" ? "Click anywhere on the map to set the job location for someone else, then review the auto-filled address fields." : "Map opens at the Philippines by default and adds a pin after you confirm location.";
 
     const mapWrap = document.createElement("div");
     mapWrap.className = "household-job-map-frame";
-    if (householdJobLocationPreview?.mapUrl) {
-      const frame = document.createElement("iframe");
-      frame.src = householdJobLocationPreview.mapUrl;
-      frame.width = "100%";
-      frame.height = "100%";
-      frame.style.border = "0";
-      frame.loading = "lazy";
-      frame.referrerPolicy = "no-referrer-when-downgrade";
-      frame.title = "Household location map preview";
-      mapWrap.append(frame);
-    } else {
-      const frame = document.createElement("iframe");
-      frame.src = buildPhilippinesMapPreviewUrl();
-      frame.width = "100%";
-      frame.height = "100%";
-      frame.style.border = "0";
-      frame.loading = "lazy";
-      frame.referrerPolicy = "no-referrer-when-downgrade";
-      frame.title = "Philippines map preview";
-      mapWrap.append(frame);
-    }
+    const mapNode = document.createElement("div");
+    mapNode.id = householdJobMapContainerIdRef.current;
+    mapNode.className = "household-job-map-canvas";
+    mapWrap.append(mapNode);
 
     const warning = document.createElement("p");
     warning.className = "small mb-2 household-job-map-warning";
@@ -1210,10 +1244,59 @@ function App() {
     previewWrap.append(card);
     form.append(previewWrap);
 
+    let cancelled = false;
+
+    (async () => {
+      try {
+        const L = await loadLeafletAssets();
+        if (cancelled || !L) {
+          return;
+        }
+        if (householdJobMapRef.current) {
+          householdJobMapRef.current.remove();
+          householdJobMapRef.current = null;
+        }
+        const mapInstance = L.map(mapNode, {
+          zoomControl: true,
+          scrollWheelZoom: true,
+        });
+        householdJobMapRef.current = mapInstance;
+        L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+          attribution: "&copy; OpenStreetMap contributors",
+        }).addTo(mapInstance);
+        if (householdJobLocationPreview?.latitude != null && householdJobLocationPreview?.longitude != null) {
+          mapInstance.setView([householdJobLocationPreview.latitude, householdJobLocationPreview.longitude], 15);
+          L.marker([householdJobLocationPreview.latitude, householdJobLocationPreview.longitude]).addTo(mapInstance);
+        } else {
+          mapInstance.setView([12.8797, 121.774], 6);
+        }
+        mapInstance.on("click", async (event) => {
+          if (householdJobMapMode !== "manual") {
+            return;
+          }
+          try {
+            await placeHouseholdJobPin(event.latlng.lat, event.latlng.lng, "manual", true);
+          } catch (error) {
+            window.alert("We could not use that pin yet. Please try another nearby spot.");
+          }
+        });
+      } catch (error) {
+        if (!cancelled) {
+          warning.style.display = "";
+          warning.textContent = "Interactive map could not be loaded right now. You can still use current location or typed address.";
+        }
+      }
+    })();
+
     return () => {
+      cancelled = true;
+      if (householdJobMapRef.current) {
+        householdJobMapRef.current.remove();
+        householdJobMapRef.current = null;
+      }
       previewWrap.remove();
     };
-  }, [view, householdJobLocationPreview?.mapUrl, householdJobLocationPreview?.latitude, householdJobLocationPreview?.longitude, householdJobLocationPreview?.locationLabel, householdJobLocationPreview?.source, householdJobLocationPreview?.warning, householdJobLocationPreview?.accuracy]);
+  }, [view, householdJobLocationPreview?.mapUrl, householdJobLocationPreview?.latitude, householdJobLocationPreview?.longitude, householdJobLocationPreview?.locationLabel, householdJobLocationPreview?.source, householdJobLocationPreview?.warning, householdJobLocationPreview?.accuracy, householdJobMapMode]);
   useEffect(() => {
     if (view !== "household-my-jobs" || !selectedJob) {
       return;
@@ -2073,6 +2156,31 @@ function App() {
       } else {
         window.alert(resolvedLocation.source === "device" ? "Current location captured successfully. You can now post the job." : "We estimated your location from the address fields and loaded the map preview.");
       }
+    }
+    return resolvedLocation;
+  }
+  async function placeHouseholdJobPin(latitude, longitude, source = "manual", showSuccessMessage = false) {
+    const reverseResult = await reverseGeocodeCoordinates(latitude, longitude, householdJobForm.barangay, householdJobForm.streetAddress);
+    const resolvedLocation = {
+      latitude: Number(Number(latitude).toFixed(7)),
+      longitude: Number(Number(longitude).toFixed(7)),
+      barangay: reverseResult?.barangay || householdJobForm.barangay,
+      streetAddress: reverseResult?.streetAddress || householdJobForm.streetAddress,
+      locationLabel: reverseResult?.locationLabel || formatLocation(reverseResult?.barangay || householdJobForm.barangay, reverseResult?.streetAddress || householdJobForm.streetAddress),
+      mapUrl: buildMapPreviewUrl(latitude, longitude),
+      source,
+      warning: source === "manual" ? "Manual pin placed. Review the auto-filled address before posting." : reverseResult?.warning || "",
+    };
+    setHouseholdJobCoordinates({ latitude: resolvedLocation.latitude, longitude: resolvedLocation.longitude });
+    setHouseholdJobLocationPreview(resolvedLocation);
+    setHouseholdJobForm((prev) => ({
+      ...prev,
+      barangay: resolvedLocation.barangay || prev.barangay,
+      streetAddress: resolvedLocation.streetAddress || prev.streetAddress,
+    }));
+    setHouseholdJobMapMode("preview");
+    if (showSuccessMessage) {
+      window.alert(source === "manual" ? "Manual pin saved. Barangay and street fields were updated automatically." : "Location updated.");
     }
     return resolvedLocation;
   }

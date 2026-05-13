@@ -13,6 +13,10 @@ const EMPTY_HOUSEHOLD_FORM = { firstName: "", lastName: "", username: "", email:
 const EMPTY_HOUSEHOLD_REVIEW_FORM = { rating: "5", feedback: "", jobId: "" };
 const EMPTY_WORKER_FEEDBACK_FORM = { feedback: "", jobId: "" };
 const GMAIL_ADDRESS_PATTERN = /^[A-Z0-9._%+-]+@gmail\.com$/i;
+const OPENROUTESERVICE_API_KEY = import.meta.env.VITE_OPENROUTESERVICE_API_KEY || "";
+const OPENROUTESERVICE_SEARCH_URL = import.meta.env.VITE_OPENROUTESERVICE_SEARCH_URL || "https://api.openrouteservice.org/geocode/search";
+const OPENROUTESERVICE_REVERSE_URL = import.meta.env.VITE_OPENROUTESERVICE_REVERSE_URL || "https://api.openrouteservice.org/geocode/reverse";
+const TAYABAS_CITY_CENTER = { latitude: 13.9411, longitude: 121.5874 };
 async function readResponseData(response) {
   const contentType = response.headers.get("content-type") || "";
   if (response.status === 204) {
@@ -116,6 +120,9 @@ function formatDateTime(dateValue, timeValue) {
 function formatLocation(barangay, streetAddress) {
   return [barangay, streetAddress].filter(Boolean).join(", ") || "Location not set";
 }
+function buildTayabasLocationQuery(barangay, streetAddress) {
+  return [streetAddress, barangay, "Tayabas City", "Quezon", "Philippines"].filter(Boolean).join(", ");
+}
 function splitFullName(fullName, fallbackUsername = "") {
   const normalized = String(fullName || "").trim();
   if (!normalized) {
@@ -148,6 +155,60 @@ function formatDistance(distanceKm, fallbackLabel = "") {
   }
   return fallbackLabel || "Distance not available";
 }
+function haversineDistanceKm(lat1, lon1, lat2, lon2) {
+  const firstLatitude = Number(lat1);
+  const firstLongitude = Number(lon1);
+  const secondLatitude = Number(lat2);
+  const secondLongitude = Number(lon2);
+  if (![firstLatitude, firstLongitude, secondLatitude, secondLongitude].every(Number.isFinite)) {
+    return null;
+  }
+  const earthRadiusKm = 6371;
+  const toRadians = (value) => value * Math.PI / 180;
+  const deltaLatitude = toRadians(secondLatitude - firstLatitude);
+  const deltaLongitude = toRadians(secondLongitude - firstLongitude);
+  const a = Math.sin(deltaLatitude / 2) ** 2 + Math.cos(toRadians(firstLatitude)) * Math.cos(toRadians(secondLatitude)) * Math.sin(deltaLongitude / 2) ** 2;
+  return 2 * earthRadiusKm * Math.asin(Math.sqrt(a));
+}
+function buildMapPreviewUrl(latitude, longitude) {
+  const numericLatitude = Number(latitude);
+  const numericLongitude = Number(longitude);
+  if (!Number.isFinite(numericLatitude) || !Number.isFinite(numericLongitude)) {
+    return "";
+  }
+  const latOffset = 0.008;
+  const lonOffset = 0.008;
+  const left = encodeURIComponent((numericLongitude - lonOffset).toFixed(6));
+  const bottom = encodeURIComponent((numericLatitude - latOffset).toFixed(6));
+  const right = encodeURIComponent((numericLongitude + lonOffset).toFixed(6));
+  const top = encodeURIComponent((numericLatitude + latOffset).toFixed(6));
+  const marker = `${encodeURIComponent(numericLatitude.toFixed(6))}%2C${encodeURIComponent(numericLongitude.toFixed(6))}`;
+  return `https://www.openstreetmap.org/export/embed.html?bbox=${left}%2C${bottom}%2C${right}%2C${top}&layer=mapnik&marker=${marker}`;
+}
+function buildPhilippinesMapPreviewUrl() {
+  const left = encodeURIComponent("116.870000");
+  const bottom = encodeURIComponent("4.500000");
+  const right = encodeURIComponent("126.650000");
+  const top = encodeURIComponent("21.300000");
+  return `https://www.openstreetmap.org/export/embed.html?bbox=${left}%2C${bottom}%2C${right}%2C${top}&layer=mapnik`;
+}
+function getOpenRouteServiceHeaders() {
+  return OPENROUTESERVICE_API_KEY ? {
+    Authorization: OPENROUTESERVICE_API_KEY,
+    Accept: "application/json, application/geo+json",
+  } : {
+    Accept: "application/json, application/geo+json",
+  };
+}
+function normalizeGeocodedAddress(address = {}, fallbackBarangay = "", fallbackStreetAddress = "") {
+  const barangay = address.neighbourhood || address.borough || address.suburb || address.quarter || address.locality || address.county || fallbackBarangay || "";
+  const streetAddress = [address.house_number, address.street || address.name || address.road || fallbackStreetAddress].filter(Boolean).join(" ").trim() || fallbackStreetAddress || "";
+  return {
+    barangay,
+    streetAddress,
+    locationLabel: formatLocation(barangay, streetAddress),
+  };
+}
 function getCurrentCoordinates() {
   if (typeof window === "undefined" || !window.navigator?.geolocation) {
     return Promise.resolve(null);
@@ -157,11 +218,149 @@ function getCurrentCoordinates() {
       (position) => resolve({
         latitude: Number(position.coords.latitude.toFixed(7)),
         longitude: Number(position.coords.longitude.toFixed(7)),
+        accuracy: Number(position.coords.accuracy || 0),
       }),
       () => resolve(null),
-      { enableHighAccuracy: false, timeout: 10000, maximumAge: 300000 },
+      { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 },
     );
   });
+}
+async function reverseGeocodeCoordinates(latitude, longitude, fallbackBarangay = "", fallbackStreetAddress = "") {
+  if (!OPENROUTESERVICE_API_KEY) {
+    return null;
+  }
+  const response = await fetch(
+    `${OPENROUTESERVICE_REVERSE_URL}?point.lon=${encodeURIComponent(longitude)}&point.lat=${encodeURIComponent(latitude)}&size=1&layers=address,street,locality,neighbourhood`,
+    { method: "GET", headers: getOpenRouteServiceHeaders() },
+  );
+  if (!response.ok) {
+    return null;
+  }
+  const data = await response.json();
+  const feature = Array.isArray(data?.features) ? data.features[0] : null;
+  const coordinates = Array.isArray(feature?.geometry?.coordinates) ? feature.geometry.coordinates : [];
+  const properties = feature?.properties || {};
+  const normalized = normalizeGeocodedAddress({
+    neighbourhood: properties.neighbourhood,
+    borough: properties.borough,
+    suburb: properties.suburb,
+    locality: properties.locality,
+    county: properties.county,
+    house_number: properties.housenumber,
+    street: properties.street,
+    name: properties.name,
+  }, fallbackBarangay, fallbackStreetAddress);
+  const resolvedLatitude = Number(Number(coordinates[1] ?? latitude).toFixed(7));
+  const resolvedLongitude = Number(Number(coordinates[0] ?? longitude).toFixed(7));
+  return {
+    latitude: resolvedLatitude,
+    longitude: resolvedLongitude,
+    barangay: normalized.barangay,
+    streetAddress: normalized.streetAddress,
+    locationLabel: properties.label || normalized.locationLabel || formatLocation(fallbackBarangay, fallbackStreetAddress) || "Location selected",
+    mapUrl: buildMapPreviewUrl(resolvedLatitude, resolvedLongitude),
+    source: "device",
+  };
+}
+async function geocodeAddressLocation(barangay, streetAddress) {
+  if (!OPENROUTESERVICE_API_KEY) {
+    return null;
+  }
+  const query = buildTayabasLocationQuery(barangay, streetAddress);
+  if (!query) {
+    return null;
+  }
+  const response = await fetch(
+    `${OPENROUTESERVICE_SEARCH_URL}?text=${encodeURIComponent(query)}&boundary.country=PH&focus.point.lon=${encodeURIComponent(TAYABAS_CITY_CENTER.longitude)}&focus.point.lat=${encodeURIComponent(TAYABAS_CITY_CENTER.latitude)}&size=1&layers=address,street,locality,neighbourhood`,
+    { method: "GET", headers: getOpenRouteServiceHeaders() },
+  );
+  if (!response.ok) {
+    return null;
+  }
+  const data = await response.json();
+  const feature = Array.isArray(data?.features) ? data.features[0] : null;
+  if (!feature) {
+    return null;
+  }
+  const coordinates = Array.isArray(feature.geometry?.coordinates) ? feature.geometry.coordinates : [];
+  const properties = feature.properties || {};
+  const normalized = normalizeGeocodedAddress({
+    neighbourhood: properties.neighbourhood,
+    borough: properties.borough,
+    suburb: properties.suburb,
+    locality: properties.locality,
+    county: properties.county,
+    house_number: properties.housenumber,
+    street: properties.street,
+    name: properties.name,
+  }, barangay, streetAddress);
+  const resolvedLatitude = Number(Number(coordinates[1]).toFixed(7));
+  const resolvedLongitude = Number(Number(coordinates[0]).toFixed(7));
+  if (!Number.isFinite(resolvedLatitude) || !Number.isFinite(resolvedLongitude)) {
+    return null;
+  }
+  return {
+    latitude: resolvedLatitude,
+    longitude: resolvedLongitude,
+    barangay: normalized.barangay || barangay,
+    streetAddress: normalized.streetAddress || streetAddress,
+    locationLabel: properties.label || normalized.locationLabel || query,
+    mapUrl: buildMapPreviewUrl(resolvedLatitude, resolvedLongitude),
+    source: "address",
+  };
+}
+async function resolveLocationCoordinates(barangay, streetAddress, preferCurrentLocation = false) {
+  const addressResult = await geocodeAddressLocation(barangay, streetAddress);
+  if (preferCurrentLocation) {
+    const browserCoordinates = await getCurrentCoordinates();
+    if (browserCoordinates) {
+      if (addressResult && browserCoordinates.accuracy > 120) {
+        return {
+          ...addressResult,
+          source: "address",
+          warning: `Your browser reported low location accuracy (${Math.round(browserCoordinates.accuracy)} meters), so the map was aligned to the entered address instead.`,
+          accuracy: browserCoordinates.accuracy,
+        };
+      }
+      const reverseResult = await reverseGeocodeCoordinates(browserCoordinates.latitude, browserCoordinates.longitude, barangay, streetAddress);
+      if (reverseResult && addressResult) {
+        const deviationKm = haversineDistanceKm(reverseResult.latitude, reverseResult.longitude, addressResult.latitude, addressResult.longitude);
+        if (deviationKm != null && deviationKm > 1.2 && browserCoordinates.accuracy > 60) {
+          return {
+            ...addressResult,
+            source: "address",
+            warning: `Device location differed from the entered address by ${deviationKm.toFixed(1)} km, so the address-based map point was used.`,
+            accuracy: browserCoordinates.accuracy,
+          };
+        }
+      }
+      if (reverseResult) {
+        return {
+          ...reverseResult,
+          accuracy: browserCoordinates.accuracy,
+        };
+      }
+      if (addressResult) {
+        return {
+          ...addressResult,
+          source: "address",
+          warning: "Browser geolocation was not precise enough, so the address-based map point was used instead.",
+          accuracy: browserCoordinates.accuracy,
+        };
+      }
+      return {
+        latitude: browserCoordinates.latitude,
+        longitude: browserCoordinates.longitude,
+        barangay,
+        streetAddress,
+        locationLabel: formatLocation(barangay, streetAddress),
+        mapUrl: buildMapPreviewUrl(browserCoordinates.latitude, browserCoordinates.longitude),
+        source: "device",
+        accuracy: browserCoordinates.accuracy,
+      };
+    }
+  }
+  return addressResult;
 }
 function getWorkerPhoto(worker) {
   return worker?.profilePhotoPreview || worker?.verificationSubmission?.primaryIdPreview || "";
@@ -605,6 +804,8 @@ function App() {
   const [workerFeedbackForm, setWorkerFeedbackForm] = useState(EMPTY_WORKER_FEEDBACK_FORM);
   const [adminLoginForm, setAdminLoginForm] = useState({ username: "", password: "" });
   const [matchedWorkersByJob, setMatchedWorkersByJob] = useState({});
+  const [householdJobCoordinates, setHouseholdJobCoordinates] = useState(null);
+  const [householdJobLocationPreview, setHouseholdJobLocationPreview] = useState(null);
   const backendCurrentWorker = normalizeBackendWorker(currentUser);
   const localCurrentWorker = registeredWorkers.find((item) => item.username === currentUser?.username) || null;
   const currentWorkerRequestFromProfile = normalizeVerificationRequest(currentUser?.profile?.verification_request);
@@ -850,6 +1051,19 @@ function App() {
     if (view !== "household-post-job") {
       return;
     }
+    const form = document.querySelector(".profile-card form.p-3.p-md-4");
+    const fieldRow = form?.querySelector(".row.g-3");
+    form?.classList.add("household-job-form-shell");
+    fieldRow?.classList.add("household-job-fields");
+    return () => {
+      form?.classList.remove("household-job-form-shell");
+      fieldRow?.classList.remove("household-job-fields");
+    };
+  }, [view]);
+  useEffect(() => {
+    if (view !== "household-post-job") {
+      return;
+    }
     const offeredRateInput = document.querySelector('input[name="offeredRate"]');
     const offeredRateWrap = offeredRateInput?.closest(".col-md-6");
     const existingWorkersNeededInput = document.querySelector('input[name="workersNeeded"]');
@@ -883,6 +1097,123 @@ function App() {
       fieldWrap.remove();
     };
   }, [view]);
+  useEffect(() => {
+    if (view !== "household-post-job") {
+      return;
+    }
+    const streetInput = document.querySelector('input[name="streetAddress"]');
+    const streetWrap = streetInput?.closest(".col-md-6");
+    if (!streetWrap || streetWrap.parentElement?.querySelector("[data-location-capture-wrap]")) {
+      return;
+    }
+    const buttonWrap = document.createElement("div");
+    buttonWrap.className = "col-12";
+    buttonWrap.dataset.locationCaptureWrap = "true";
+
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "btn btn-primary btn-sm household-location-trigger";
+    button.textContent = householdJobCoordinates?.latitude != null && householdJobCoordinates?.longitude != null ? "Location Ready" : "Use My Current Location";
+
+    const helper = document.createElement("p");
+    helper.className = "form-text mb-0 household-location-helper";
+    helper.textContent = householdJobCoordinates?.latitude != null && householdJobCoordinates?.longitude != null ? `Current coordinates saved for this job: ${householdJobCoordinates.latitude}, ${householdJobCoordinates.longitude}` : "Capture your current browser location or estimate from the barangay and street so smart matching can calculate worker distance correctly.";
+
+    const handleClick = async () => {
+      await captureHouseholdJobLocation();
+    };
+
+    button.addEventListener("click", handleClick);
+    buttonWrap.append(button, helper);
+    streetWrap.parentElement.append(buttonWrap);
+
+    return () => {
+      button.removeEventListener("click", handleClick);
+      buttonWrap.remove();
+    };
+  }, [view, householdJobCoordinates?.latitude, householdJobCoordinates?.longitude]);
+  useEffect(() => {
+    if (view !== "household-post-job") {
+      return;
+    }
+    const form = document.querySelector(".profile-card form.p-3.p-md-4");
+    if (!form) {
+      return;
+    }
+    const existingPanel = form.querySelector("[data-location-preview-panel]");
+    if (existingPanel) {
+      existingPanel.remove();
+    }
+    const previewWrap = document.createElement("div");
+    previewWrap.className = "col-12 household-job-map-panel";
+    previewWrap.dataset.locationPreviewPanel = "true";
+
+    const card = document.createElement("div");
+    card.className = "household-job-map-card";
+
+    const heading = document.createElement("p");
+    heading.className = "household-job-map-eyebrow mb-2";
+    heading.textContent = householdJobLocationPreview?.source === "device" ? "Current Location Preview" : householdJobLocationPreview?.source === "address" ? "Address-based Preview" : "Philippines Map Preview";
+
+    const title = document.createElement("h3");
+    title.className = "household-job-map-title mb-2";
+    title.textContent = householdJobLocationPreview?.mapUrl ? "Check the saved job pin before posting" : "The map starts at the Philippines, then drops a pin after location capture";
+
+    const address = document.createElement("p");
+    address.className = "small text-muted mb-2";
+    address.textContent = householdJobLocationPreview?.locationLabel || "Use your current location or complete the address fields to place the job on the map.";
+
+    const coords = document.createElement("p");
+    coords.className = "small mb-2 household-job-map-coords";
+    coords.textContent = householdJobLocationPreview?.latitude != null && householdJobLocationPreview?.longitude != null ? `Latitude: ${householdJobLocationPreview.latitude}, Longitude: ${householdJobLocationPreview.longitude}` : "No confirmed map pin yet.";
+
+    const accuracy = document.createElement("p");
+    accuracy.className = "small mb-3 household-job-map-accuracy";
+    accuracy.textContent = householdJobLocationPreview?.accuracy ? `Reported device accuracy: about ${Math.round(householdJobLocationPreview.accuracy)} meters` : "Map opens at the Philippines by default and adds a pin after you confirm location.";
+
+    const mapWrap = document.createElement("div");
+    mapWrap.className = "household-job-map-frame";
+    if (householdJobLocationPreview?.mapUrl) {
+      const frame = document.createElement("iframe");
+      frame.src = householdJobLocationPreview.mapUrl;
+      frame.width = "100%";
+      frame.height = "100%";
+      frame.style.border = "0";
+      frame.loading = "lazy";
+      frame.referrerPolicy = "no-referrer-when-downgrade";
+      frame.title = "Household location map preview";
+      mapWrap.append(frame);
+    } else {
+      const frame = document.createElement("iframe");
+      frame.src = buildPhilippinesMapPreviewUrl();
+      frame.width = "100%";
+      frame.height = "100%";
+      frame.style.border = "0";
+      frame.loading = "lazy";
+      frame.referrerPolicy = "no-referrer-when-downgrade";
+      frame.title = "Philippines map preview";
+      mapWrap.append(frame);
+    }
+
+    const warning = document.createElement("p");
+    warning.className = "small mb-2 household-job-map-warning";
+    warning.textContent = householdJobLocationPreview?.warning || "";
+    if (!householdJobLocationPreview?.warning) {
+      warning.style.display = "none";
+    }
+
+    const note = document.createElement("p");
+    note.className = "small text-muted mt-2 mb-0";
+    note.textContent = "Geocoding uses OpenRouteService, while the visual map preview is rendered with OpenStreetMap.";
+
+    card.append(heading, title, address, coords, accuracy, mapWrap, warning, note);
+    previewWrap.append(card);
+    form.append(previewWrap);
+
+    return () => {
+      previewWrap.remove();
+    };
+  }, [view, householdJobLocationPreview?.mapUrl, householdJobLocationPreview?.latitude, householdJobLocationPreview?.longitude, householdJobLocationPreview?.locationLabel, householdJobLocationPreview?.source, householdJobLocationPreview?.warning, householdJobLocationPreview?.accuracy]);
   useEffect(() => {
     if (view !== "household-my-jobs" || !selectedJob) {
       return;
@@ -1396,6 +1727,12 @@ function App() {
               verificationReviewedBy: matchingRequest.reviewedBy || worker.verificationReviewedBy || "",
               verificationRejectionNote: matchingRequest.reviewNote || worker.verificationRejectionNote || "",
             } : worker));
+          } else {
+            setRegisteredWorkers((prev) => prev.map((worker) => worker.username === currentUser.username ? {
+              ...worker,
+              verificationSubmission: null,
+              verificationRequestId: null,
+            } : worker));
           }
         }
       }
@@ -1438,6 +1775,9 @@ function App() {
       const records = Array.isArray(data) ? data : data?.results || [];
       const normalizedJobs = records.map(normalizeBackendJob).filter(Boolean);
       setPostedJobs(normalizedJobs);
+      if (normalizedJobs.length === 0) {
+        setMatchedWorkersByJob({});
+      }
     } catch (error) {
       return;
     }
@@ -1456,39 +1796,47 @@ function App() {
       const normalizedProfiles = records.map(normalizeProfileRecord).filter(Boolean);
       const workerProfiles = normalizedProfiles.filter((profile) => profile.role === "worker");
       const householdProfiles = normalizedProfiles.filter((profile) => profile.role === "household");
-      if (workerProfiles.length > 0) {
-        setRegisteredWorkers((prev) => workerProfiles.map((workerProfile) => {
-          const existing = prev.find((item) => item.username?.toLowerCase() === workerProfile.username?.toLowerCase() || String(item.id) === String(workerProfile.id));
-          return {
-            ...existing,
-            ...workerProfile,
-            verificationSubmission: existing?.verificationSubmission || null,
-            verificationNotifications: existing?.verificationNotifications || [],
-            applicationNotifications: existing?.applicationNotifications || [],
-            receivedReviews: existing?.receivedReviews || [],
-            givenFeedback: existing?.givenFeedback || [],
-            avatar: existing?.avatar || (workerProfile.firstName || workerProfile.username || "W").slice(0, 1).toUpperCase(),
-            bio: existing?.bio || "",
-            phone: existing?.phone || "",
-            yearsExperience: existing?.yearsExperience || "0",
-            status: existing?.status || "Available",
-            distanceKm: existing?.distanceKm || "0.00",
-            distanceLabel: existing?.distanceLabel || "",
-          };
-        }));
-      }
-      if (householdProfiles.length > 0) {
-        setRegisteredHouseholds((prev) => householdProfiles.map((householdProfile) => {
-          const existing = prev.find((item) => item.username?.toLowerCase() === householdProfile.username?.toLowerCase() || String(item.id) === String(householdProfile.id));
-          return {
-            ...existing,
-            ...householdProfile,
-            avatar: existing?.avatar || (householdProfile.firstName || householdProfile.username || "H").slice(0, 1).toUpperCase(),
-            phone: existing?.phone || "",
-            receivedFeedback: existing?.receivedFeedback || [],
-            givenFeedback: existing?.givenFeedback || [],
-          };
-        }));
+      setRegisteredWorkers((prev) => workerProfiles.map((workerProfile) => {
+        const existing = prev.find((item) => item.username?.toLowerCase() === workerProfile.username?.toLowerCase() || String(item.id) === String(workerProfile.id));
+        return {
+          ...existing,
+          ...workerProfile,
+          verificationSubmission: existing?.verificationSubmission || null,
+          verificationNotifications: existing?.verificationNotifications || [],
+          applicationNotifications: existing?.applicationNotifications || [],
+          receivedReviews: existing?.receivedReviews || [],
+          givenFeedback: existing?.givenFeedback || [],
+          avatar: existing?.avatar || (workerProfile.firstName || workerProfile.username || "W").slice(0, 1).toUpperCase(),
+          bio: existing?.bio || "",
+          phone: existing?.phone || "",
+          yearsExperience: existing?.yearsExperience || "0",
+          status: existing?.status || "Available",
+          distanceKm: existing?.distanceKm || "0.00",
+          distanceLabel: existing?.distanceLabel || "",
+        };
+      }));
+      setRegisteredHouseholds((prev) => householdProfiles.map((householdProfile) => {
+        const existing = prev.find((item) => item.username?.toLowerCase() === householdProfile.username?.toLowerCase() || String(item.id) === String(householdProfile.id));
+        return {
+          ...existing,
+          ...householdProfile,
+          avatar: existing?.avatar || (householdProfile.firstName || householdProfile.username || "H").slice(0, 1).toUpperCase(),
+          phone: existing?.phone || "",
+          receivedFeedback: existing?.receivedFeedback || [],
+          givenFeedback: existing?.givenFeedback || [],
+        };
+      }));
+      if (currentUser?.role && currentUser.role !== "admin") {
+        const userStillExists = normalizedProfiles.some((profile) => profile.username === currentUser.username);
+        if (!userStillExists) {
+          clearAuthToken();
+          setCurrentUser(null);
+          setSelectedJobId(null);
+          setSelectedWorkerId(null);
+          setMatchedWorkersByJob({});
+          setView("login");
+          window.alert("Your account data was removed from the backend, so the local session has been cleared.");
+        }
       }
     } catch (error) {
       return;
@@ -1503,6 +1851,10 @@ function App() {
         auth: false,
         suppressUnauthorized: true,
       });
+      if (response.status === 404) {
+        setMatchedWorkersByJob((prev) => ({ ...prev, [jobId]: [] }));
+        return;
+      }
       if (!response.ok) {
         return;
       }
@@ -1601,6 +1953,8 @@ function App() {
     if (currentHousehold) {
       setHouseholdJobForm((prev) => ({ ...prev, barangay: prev.barangay || currentHousehold.barangay || "", streetAddress: prev.streetAddress || currentHousehold.streetAddress || "" }));
     }
+    setHouseholdJobCoordinates(null);
+    setHouseholdJobLocationPreview(null);
     setView("household-post-job");
   }
   function openHouseholdProfile() {
@@ -1699,6 +2053,28 @@ function App() {
   function openFilePreview(fileUrl) {
     if (!fileUrl) return;
     window.open(fileUrl, "_blank", "noopener,noreferrer");
+  }
+  async function captureHouseholdJobLocation(showSuccessMessage = true) {
+    const resolvedLocation = await resolveLocationCoordinates(householdJobForm.barangay, householdJobForm.streetAddress, true);
+    if (!resolvedLocation) {
+      window.alert("We could not detect or estimate your location yet. Please allow browser location access or complete the barangay and street fields first.");
+      return null;
+    }
+    setHouseholdJobCoordinates({ latitude: resolvedLocation.latitude, longitude: resolvedLocation.longitude });
+    setHouseholdJobLocationPreview(resolvedLocation);
+    setHouseholdJobForm((prev) => ({
+      ...prev,
+      barangay: resolvedLocation.barangay || prev.barangay,
+      streetAddress: resolvedLocation.streetAddress || prev.streetAddress,
+    }));
+    if (showSuccessMessage) {
+      if (resolvedLocation.warning) {
+        window.alert(resolvedLocation.warning);
+      } else {
+        window.alert(resolvedLocation.source === "device" ? "Current location captured successfully. You can now post the job." : "We estimated your location from the address fields and loaded the map preview.");
+      }
+    }
+    return resolvedLocation;
   }
   function handleApplyToJob(jobId) {
     if (!currentWorker) {
@@ -2015,6 +2391,10 @@ function App() {
   }
   function handleHouseholdJobChange(event) {
     const { name, value } = event.target;
+    if (name === "barangay" || name === "streetAddress") {
+      setHouseholdJobCoordinates(null);
+      setHouseholdJobLocationPreview(null);
+    }
     setHouseholdJobForm((prev) => ({ ...prev, [name]: value }));
   }
   function handleWorkerProfileChange(event) {
@@ -2155,7 +2535,7 @@ function App() {
     }
     (async () => {
       try {
-        const coordinates = await getCurrentCoordinates();
+        const resolvedLocation = await resolveLocationCoordinates(workerForm.barangay, workerForm.streetAddress, false);
         const response = await apiRequest("accounts/register/", {
           method: "POST",
           auth: false,
@@ -2169,9 +2549,9 @@ function App() {
             skills: Array.from(new Set([...workerForm.skills || [], ...(workerForm.customSkill.trim() ? [workerForm.customSkill.trim()] : [])])),
             hourly_rate: workerForm.hourlyRate,
             daily_rate: workerForm.dailyRate,
-            location_label: formatLocation(workerForm.barangay, workerForm.streetAddress),
-            latitude: coordinates?.latitude ?? null,
-            longitude: coordinates?.longitude ?? null,
+            location_label: resolvedLocation?.locationLabel || formatLocation(workerForm.barangay, workerForm.streetAddress),
+            latitude: resolvedLocation?.latitude ?? null,
+            longitude: resolvedLocation?.longitude ?? null,
           },
         });
         const data = await readResponseData(response);
@@ -2188,8 +2568,8 @@ function App() {
           reviewsDone: 0,
           status: "Available",
           distanceKm: "0.00",
-          latitude: coordinates?.latitude ?? null,
-          longitude: coordinates?.longitude ?? null,
+          latitude: resolvedLocation?.latitude ?? null,
+          longitude: resolvedLocation?.longitude ?? null,
           avatar: (workerForm.firstName || workerForm.username || "W").slice(0, 1).toUpperCase(),
           receivedReviews: [],
           givenFeedback: [],
@@ -2232,7 +2612,7 @@ function App() {
     }
     (async () => {
       try {
-        const coordinates = await getCurrentCoordinates();
+        const resolvedLocation = await resolveLocationCoordinates(householdForm.barangay, householdForm.streetAddress, false);
         const response = await apiRequest("accounts/register/", {
           method: "POST",
           auth: false,
@@ -2243,9 +2623,9 @@ function App() {
             first_name: householdForm.firstName.trim(),
             last_name: householdForm.lastName.trim(),
             role: "household",
-            location_label: formatLocation(householdForm.barangay, householdForm.streetAddress),
-            latitude: coordinates?.latitude ?? null,
-            longitude: coordinates?.longitude ?? null,
+            location_label: resolvedLocation?.locationLabel || formatLocation(householdForm.barangay, householdForm.streetAddress),
+            latitude: resolvedLocation?.latitude ?? null,
+            longitude: resolvedLocation?.longitude ?? null,
           },
         });
         const data = await readResponseData(response);
@@ -2256,8 +2636,8 @@ function App() {
           ...householdForm,
           id: Date.now(),
           username: householdForm.username.trim(),
-          latitude: coordinates?.latitude ?? null,
-          longitude: coordinates?.longitude ?? null,
+          latitude: resolvedLocation?.latitude ?? null,
+          longitude: resolvedLocation?.longitude ?? null,
         };
         setRegisteredHouseholds((prev) => [...prev, householdAccount]);
         setHouseholdForm(EMPTY_HOUSEHOLD_FORM);
@@ -2504,8 +2884,18 @@ function App() {
       return;
     }
     (async () => {
-      const browserCoordinates = await getCurrentCoordinates();
+      const resolvedLocation = householdJobLocationPreview || await resolveLocationCoordinates(householdJobForm.barangay, householdJobForm.streetAddress, true);
       const scheduledLabel = `${formatScheduleLabel(householdJobForm.scheduleType)}${householdJobForm.preferredDate ? ` on ${householdJobForm.preferredDate}` : ""}${householdJobForm.preferredTime ? ` at ${householdJobForm.preferredTime}` : ""}`;
+      const resolvedLatitude = resolvedLocation?.latitude ?? householdJobCoordinates?.latitude ?? currentUser?.profile?.latitude ?? currentHousehold?.latitude ?? null;
+      const resolvedLongitude = resolvedLocation?.longitude ?? householdJobCoordinates?.longitude ?? currentUser?.profile?.longitude ?? currentHousehold?.longitude ?? null;
+      if (resolvedLatitude == null || resolvedLongitude == null) {
+        window.alert("Location is required before posting a job. Click 'Use My Current Location' or complete the barangay and street fields so we can estimate the map location first.");
+        return;
+      }
+      if (resolvedLocation) {
+        setHouseholdJobLocationPreview(resolvedLocation);
+        setHouseholdJobCoordinates({ latitude: resolvedLatitude, longitude: resolvedLongitude });
+      }
       const payload = {
         household_username: currentHousehold?.username || currentUser.username,
         title: householdJobForm.jobTitle.trim() || householdJobForm.serviceType,
@@ -2513,9 +2903,9 @@ function App() {
         required_skill: householdJobForm.serviceType,
         schedule: scheduledLabel,
         description: householdJobForm.description.trim(),
-        location_label: formatLocation(householdJobForm.barangay.trim(), householdJobForm.streetAddress.trim()),
-        latitude: browserCoordinates?.latitude ?? currentUser?.profile?.latitude ?? currentHousehold?.latitude ?? null,
-        longitude: browserCoordinates?.longitude ?? currentUser?.profile?.longitude ?? currentHousehold?.longitude ?? null,
+        location_label: resolvedLocation?.locationLabel || formatLocation(householdJobForm.barangay.trim(), householdJobForm.streetAddress.trim()),
+        latitude: resolvedLatitude,
+        longitude: resolvedLongitude,
         service_rate: householdJobForm.offeredRate,
         worker_slots: getWorkersNeeded(householdJobForm),
       };
@@ -2543,6 +2933,8 @@ function App() {
         setSelectedJobId(newJob.id);
         window.alert(error.message || "Job posted locally.");
       } finally {
+        setHouseholdJobCoordinates(null);
+        setHouseholdJobLocationPreview(null);
         setHouseholdJobForm({ jobTitle: "", serviceType: "", scheduleType: "One - Time", preferredDate: "", preferredTime: "", description: "", barangay: currentHousehold?.barangay || "", streetAddress: currentHousehold?.streetAddress || "", offeredRate: "0.00", rateType: "Per Day", workersNeeded: "1" });
         setView("household-my-jobs");
       }

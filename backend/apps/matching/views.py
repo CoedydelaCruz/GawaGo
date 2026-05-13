@@ -1,3 +1,4 @@
+from rest_framework import status
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
@@ -19,7 +20,17 @@ class RecommendedWorkersView(APIView):
         return self._build_response(serializer.validated_data["job_id"])
 
     def _build_response(self, job_id):
-        job = JobPosting.objects.get(pk=job_id)
+        try:
+            job = JobPosting.objects.get(pk=job_id)
+        except JobPosting.DoesNotExist:
+            return Response(
+                {
+                    "detail": "Job posting not found.",
+                    "job_id": job_id,
+                    "results": [],
+                },
+                status=status.HTTP_404_NOT_FOUND,
+            )
         workers = UserProfile.objects.select_related("user").filter(role=UserProfile.ROLE_WORKER)
         results = build_match_results(job, list(workers))
         return Response(

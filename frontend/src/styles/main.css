@@ -689,6 +689,103 @@ body {
   box-shadow: 0 12px 28px rgba(31, 72, 221, 0.07);
 }
 
+.household-job-form-shell {
+  display: grid;
+  grid-template-columns: minmax(0, 1.08fr) minmax(320px, 0.92fr);
+  gap: 1rem;
+  align-items: start;
+}
+
+.household-job-fields {
+  margin: 0;
+}
+
+.household-job-fields .col-12.d-flex.gap-2 {
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.household-location-trigger {
+  min-width: 176px;
+  border-radius: 999px;
+  padding-inline: 1rem;
+  box-shadow: 0 10px 22px rgba(208, 8, 122, 0.18);
+}
+
+.household-location-helper {
+  margin-top: 0.5rem;
+}
+
+.household-job-map-panel {
+  margin: 0;
+}
+
+.household-job-map-card {
+  border: 1px solid rgba(173, 197, 255, 0.82);
+  background: linear-gradient(180deg, #ffffff 0%, #f5f8ff 100%);
+  border-radius: 1.1rem;
+  padding: 1rem;
+  min-height: 100%;
+  box-shadow: 0 12px 28px rgba(31, 72, 221, 0.07);
+}
+
+.household-job-map-eyebrow {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.35rem 0.7rem;
+  border-radius: 999px;
+  background: rgba(46, 91, 255, 0.12);
+  color: #1e4fe0;
+  font-weight: 700;
+  font-size: 0.76rem;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.household-job-map-title {
+  font-size: 1.35rem;
+  font-weight: 800;
+  color: #1c2340;
+}
+
+.household-job-map-frame {
+  min-height: 360px;
+  border-radius: 1rem;
+  overflow: hidden;
+  border: 1px solid #d8e2ff;
+  background: #eef4ff;
+}
+
+.household-job-map-frame iframe {
+  width: 100%;
+  height: 100%;
+  min-height: 360px;
+}
+
+.household-job-map-placeholder {
+  min-height: 360px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: clamp(2.8rem, 6vw, 4.6rem);
+  font-weight: 300;
+  color: #2f3241;
+  letter-spacing: 0.04em;
+}
+
+.household-job-map-warning {
+  color: #7d4b00;
+  background: rgba(255, 248, 223, 0.95);
+  border: 1px solid rgba(235, 213, 135, 0.95);
+  border-radius: 0.85rem;
+  padding: 0.75rem 0.85rem;
+}
+
+.household-job-map-accuracy,
+.household-job-map-coords {
+  color: #4f5672;
+}
+
 .profile-card-head {
   background: linear-gradient(90deg, var(--gg-brand-start), var(--gg-brand-end));
   color: #fff;
@@ -1169,6 +1266,16 @@ body {
 }
 
 @media (max-width: 991px) {
+  .household-job-form-shell {
+    grid-template-columns: 1fr;
+  }
+
+  .household-job-map-frame,
+  .household-job-map-frame iframe,
+  .household-job-map-placeholder {
+    min-height: 280px;
+  }
+
   .worker-layout {
     grid-template-columns: 1fr;
   }

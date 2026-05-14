@@ -1,10 +1,14 @@
 import React, { useEffect, useRef, useState } from "react";
+import { createRoot } from "react-dom/client";
+import { Bar, BarChart, CartesianGrid, Cell, Legend, Line, LineChart, Pie, PieChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { apiRequest, clearAuthToken, getApiBaseUrl, getAuthToken, setAuthToken, setUnauthorizedHandler } from "./api/apiClient";
+import LocationDistanceMap from "./components/LocationDistanceMap";
+import "./styles/analytics.css";
 const SKILLS = ["House Cleaning", "Cooking", "Laundry", "Childcare", "Elder Care", "Gardening", "Electrical Work", "Plumbing", "Carpentry", "Painting", "Aircon Repair/Cleaning", "Welding", "Driving", "Other"];
-const BARANGAYS = ["Alitao", "Anos", "Ayaas", "Baguio", "Bakal", "Bucal", "Bulkan", "Calumpang", "Camaysa", "Dapdap", "Del Rosario", "Gibanga", "Ilasan", "Isabang", "Lalo", "Lita", "Mateuna", "Mayowe", "Opias", "Palale", "Piis", "Rizaliana", "San Diego", "San Isidro", "San Roque", "Talolong", "Tongko", "Wakas", "Poblacion"];
+const BARANGAYS = ["Alitao", "Anos", "Ayaas", "Baguio", "Bakal", "Bucal", "Bulkan", "Calumpang", "Camaysa", "Dapdap", "Del Rosario", "Gibanga", "Ilasan", "Isabang", "Lalo", "Lakawan", "Lita", "Mateuna", "Mayowe", "Opias", "Palale", "Piis", "Rizaliana", "San Diego", "San Isidro", "San Roque", "Talolong", "Tongko", "Wakas", "Poblacion"];
 const STORAGE_KEYS = { workers: "gawago-registered-workers", households: "gawago-registered-households", jobs: "gawago-posted-jobs", verificationRequests: "gawago-verification-requests", notificationReads: "gawago-notification-reads" };
-const ADMIN_ACCOUNT = { username: "admin", password: "admin123", displayName: "System Admin" };
-const DEMO_DATA_VERSION = "v14";
+const SUPER_ADMIN_ACCOUNT = { username: "superadmin", password: "superadmin123", displayName: "Super Admin" };
+const DEMO_DATA_VERSION = "v15";
 const DEMO_VERSION_KEY = "gawago-demo-data-version";
 const API_BASE_URL = getApiBaseUrl();
 const ACCOUNTS_API_BASE_URL = `${API_BASE_URL}/accounts`;
@@ -17,7 +21,61 @@ const OPENROUTESERVICE_API_KEY = import.meta.env.VITE_OPENROUTESERVICE_API_KEY |
 const OPENROUTESERVICE_SEARCH_URL = import.meta.env.VITE_OPENROUTESERVICE_SEARCH_URL || "https://api.openrouteservice.org/geocode/search";
 const OPENROUTESERVICE_REVERSE_URL = import.meta.env.VITE_OPENROUTESERVICE_REVERSE_URL || "https://api.openrouteservice.org/geocode/reverse";
 const TAYABAS_CITY_CENTER = { latitude: 13.9411, longitude: 121.5874 };
+const ANALYTICS_CHART_COLORS = ["#667eea", "#28a745", "#ffc107", "#dc3545", "#17a2b8", "#4f2ea4"];
+const ANALYTICS_SERVICE_CATEGORIES = ["House Cleaning", "Plumbing", "Electrical Work", "Laundry", "Childcare"];
+const DEMO_HOUSEHOLD_ACCOUNTS = [
+  { id: "demo-household-1", username: "Household 1", password: "Household 1", firstName: "Household", lastName: "One", email: "household1@gmail.com", phone: "9170000001", barangay: "Poblacion", streetAddress: "Demo Street 1", latitude: 13.9411, longitude: 121.5874 },
+  { id: "demo-household-2", username: "Household 2", password: "Household 2", firstName: "Household", lastName: "Two", email: "household2@gmail.com", phone: "9170000002", barangay: "Isabang", streetAddress: "Demo Street 2", latitude: 13.9633, longitude: 121.5447 },
+  { id: "demo-household-3", username: "Household 3", password: "Household 3", firstName: "Household", lastName: "Three", email: "household3@gmail.com", phone: "9170000003", barangay: "San Roque", streetAddress: "Demo Street 3", latitude: 13.9431, longitude: 121.5827 },
+  { id: "demo-household-4", username: "Household 4", password: "Household 4", firstName: "Household", lastName: "Four", email: "household4@gmail.com", phone: "9170000004", barangay: "Calumpang", streetAddress: "Demo Street 4", latitude: 13.9404, longitude: 121.5528 },
+  { id: "demo-household-5", username: "Household 5", password: "Household 5", firstName: "Household", lastName: "Five", email: "household5@gmail.com", phone: "9170000005", barangay: "Dapdap", streetAddress: "Demo Street 5", latitude: 13.9616, longitude: 121.6168 },
+];
+const DEMO_WORKER_ACCOUNTS = [
+  { id: "demo-worker-1", username: "Worker1", password: "Worker123", firstName: "Worker", lastName: "One", email: "worker1@gmail.com", phone: "9180000001", barangay: "Poblacion", streetAddress: "Worker Street 1", bio: "Experienced home cleaner and laundry helper.", hourlyRate: "120.00", dailyRate: "650.00", yearsExperience: "3", skills: ["House Cleaning", "Laundry"], verification: "Verified", rating: "4.90", reviewsDone: 3, status: "Available", distanceKm: "0.00", latitude: 13.9411, longitude: 121.5874, avatar: "W", receivedReviews: [{ id: "demo-review-1", rating: 5, feedback: "Reliable and fast.", createdAt: "Recently" }, { id: "demo-review-2", rating: 5, feedback: "Great service.", createdAt: "Recently" }], givenFeedback: [], verificationNotifications: [], applicationNotifications: [] },
+  { id: "demo-worker-2", username: "Worker2", password: "Worker123", firstName: "Worker", lastName: "Two", email: "worker2@gmail.com", phone: "9180000002", barangay: "Isabang", streetAddress: "Worker Street 2", bio: "Plumbing and minor repair specialist.", hourlyRate: "180.00", dailyRate: "900.00", yearsExperience: "5", skills: ["Plumbing", "Carpentry"], verification: "Verified", rating: "4.50", reviewsDone: 2, status: "Available", distanceKm: "0.00", latitude: 13.9633, longitude: 121.5447, avatar: "W", receivedReviews: [{ id: "demo-review-3", rating: 4, feedback: "Good repair work.", createdAt: "Recently" }, { id: "demo-review-4", rating: 5, feedback: "Very professional.", createdAt: "Recently" }], givenFeedback: [], verificationNotifications: [], applicationNotifications: [] },
+  { id: "demo-worker-3", username: "Worker3", password: "Worker123", firstName: "Worker", lastName: "Three", email: "worker3@gmail.com", phone: "9180000003", barangay: "San Roque", streetAddress: "Worker Street 3", bio: "Electrical work and appliance troubleshooting.", hourlyRate: "200.00", dailyRate: "1000.00", yearsExperience: "4", skills: ["Electrical Work", "Aircon Repair/Cleaning"], verification: "Under Review", rating: "4.00", reviewsDone: 1, status: "Available", distanceKm: "0.00", latitude: 13.9431, longitude: 121.5827, avatar: "W", receivedReviews: [{ id: "demo-review-5", rating: 4, feedback: "Solved the issue.", createdAt: "Recently" }], givenFeedback: [], verificationNotifications: [], applicationNotifications: [] },
+  { id: "demo-worker-4", username: "Worker4", password: "Worker123", firstName: "Worker", lastName: "Four", email: "worker4@gmail.com", phone: "9180000004", barangay: "Calumpang", streetAddress: "Worker Street 4", bio: "Childcare and household support.", hourlyRate: "130.00", dailyRate: "700.00", yearsExperience: "2", skills: ["Childcare", "Cooking"], verification: "Rejected", rating: "3.00", reviewsDone: 1, status: "Available", distanceKm: "0.00", latitude: 13.9404, longitude: 121.5528, avatar: "W", receivedReviews: [{ id: "demo-review-6", rating: 3, feedback: "Completed basic tasks.", createdAt: "Recently" }], givenFeedback: [], verificationNotifications: [], applicationNotifications: [] },
+  { id: "demo-worker-5", username: "Worker5", password: "Worker123", firstName: "Worker", lastName: "Five", email: "worker5@gmail.com", phone: "9180000005", barangay: "Dapdap", streetAddress: "Worker Street 5", bio: "Laundry, cleaning, and cooking assistant.", hourlyRate: "110.00", dailyRate: "600.00", yearsExperience: "1", skills: ["Laundry", "House Cleaning", "Cooking"], verification: "Not Yet Verified", rating: "No ratings yet", reviewsDone: 0, status: "Available", distanceKm: "0.00", latitude: 13.9616, longitude: 121.6168, avatar: "W", receivedReviews: [], givenFeedback: [], verificationNotifications: [], applicationNotifications: [] },
+];
+const DEMO_VERIFICATION_REQUESTS = [
+  { id: "demo-verification-3", workerId: "demo-worker-3", workerUsername: "Worker3", workerName: "Worker Three", submittedAt: "Recently", reviewedAt: "", reviewedBy: "", status: "Pending", primaryIdName: "UMID", secondaryDocName: "Barangay Clearance", notes: "Awaiting admin review." },
+  { id: "demo-verification-4", workerId: "demo-worker-4", workerUsername: "Worker4", workerName: "Worker Four", submittedAt: "Recently", reviewedAt: "Recently", reviewedBy: "Super Admin", status: "Rejected", primaryIdName: "Driver License", secondaryDocName: "NBI Clearance", notes: "Document image needs resubmission.", reviewNote: "Please upload clearer documents." },
+];
+const DEMO_ACCOUNT_PASSWORDS = Object.fromEntries([...DEMO_HOUSEHOLD_ACCOUNTS, ...DEMO_WORKER_ACCOUNTS].map((account) => [account.username, account.password]));
+const BARANGAY_CENTERS = {
+  Alitao: { latitude: 13.9548, longitude: 121.6002 },
+  Anos: { latitude: 13.9317, longitude: 121.5715 },
+  Ayaas: { latitude: 13.9589, longitude: 121.5645 },
+  Baguio: { latitude: 13.9177, longitude: 121.5768 },
+  Bakal: { latitude: 13.9049, longitude: 121.5958 },
+  Bucal: { latitude: 13.9328, longitude: 121.6108 },
+  Bulkan: { latitude: 13.9477, longitude: 121.6224 },
+  Calumpang: { latitude: 13.9404, longitude: 121.5528 },
+  Camaysa: { latitude: 13.9743, longitude: 121.5841 },
+  Dapdap: { latitude: 13.9616, longitude: 121.6168 },
+  "Del Rosario": { latitude: 13.9463, longitude: 121.5919 },
+  Gibanga: { latitude: 13.9004, longitude: 121.5667 },
+  Ilasan: { latitude: 13.9225, longitude: 121.6281 },
+  Isabang: { latitude: 13.9633, longitude: 121.5447 },
+  Lalo: { latitude: 13.8878, longitude: 121.5871 },
+  Lakawan: { latitude: 13.9118, longitude: 121.5458 },
+  Lita: { latitude: 13.9699, longitude: 121.6037 },
+  Mateuna: { latitude: 13.9345, longitude: 121.6406 },
+  Mayowe: { latitude: 13.9126, longitude: 121.6164 },
+  Opias: { latitude: 13.9821, longitude: 121.6243 },
+  Palale: { latitude: 13.8913, longitude: 121.6247 },
+  Piis: { latitude: 13.9794, longitude: 121.5565 },
+  Poblacion: { latitude: 13.9411, longitude: 121.5874 },
+  Rizaliana: { latitude: 13.9476, longitude: 121.5339 },
+  "San Diego": { latitude: 13.9292, longitude: 121.5908 },
+  "San Isidro": { latitude: 13.9558, longitude: 121.5763 },
+  "San Roque": { latitude: 13.9431, longitude: 121.5827 },
+  Talolong: { latitude: 13.8824, longitude: 121.5526 },
+  Tongko: { latitude: 13.9948, longitude: 121.5948 },
+  Wakas: { latitude: 13.9263, longitude: 121.6047 },
+};
 let leafletAssetsPromise = null;
+let tayabasBarangayCentersPromise = null;
 async function readResponseData(response) {
   const contentType = response.headers.get("content-type") || "";
   if (response.status === 204) {
@@ -76,6 +134,12 @@ function getStoredCollection(key, fallback) {
     return fallback;
   }
 }
+function mergeDemoRecords(records, demoRecords, key = "username") {
+  const currentRecords = Array.isArray(records) ? records : [];
+  const existingKeys = new Set(currentRecords.map((record) => String(record?.[key] || "").toLowerCase()));
+  const missingDemoRecords = demoRecords.filter((record) => !existingKeys.has(String(record?.[key] || "").toLowerCase()));
+  return [...missingDemoRecords, ...currentRecords];
+}
 function getStoredObject(key, fallback) {
   if (typeof window === "undefined") {
     return fallback;
@@ -105,6 +169,67 @@ function formatCurrency(amount) {
 function formatRate(amount, rateType) {
   return `${formatCurrency(amount)} / ${rateType || "Per Day"}`;
 }
+function formatAnalyticsMonth(date) {
+  return date.toLocaleString("en-US", { month: "short" });
+}
+function getAnalyticsJobDate(job) {
+  const parsedDate = new Date(job?.createdAt || job?.created_at || job?.preferredDate || Date.now());
+  return Number.isNaN(parsedDate.getTime()) ? new Date() : parsedDate;
+}
+function buildMonthlyJobRequests(jobs) {
+  const now = new Date();
+  return Array.from({ length: 6 }, (_, index) => {
+    const date = new Date(now.getFullYear(), now.getMonth() - (5 - index), 1);
+    const month = formatAnalyticsMonth(date);
+    const year = date.getFullYear();
+    return {
+      month,
+      requests: jobs.filter((job) => {
+        const jobDate = getAnalyticsJobDate(job);
+        return jobDate.getMonth() === date.getMonth() && jobDate.getFullYear() === year;
+      }).length,
+    };
+  });
+}
+function buildServiceAnalytics(jobs) {
+  const categories = Array.from(new Set([...ANALYTICS_SERVICE_CATEGORIES, ...jobs.map((job) => job.serviceType).filter(Boolean)]));
+  return categories.map((service) => ({
+    service: service.replace("House ", ""),
+    requests: jobs.filter((job) => job.serviceType === service).length,
+  })).filter((item) => item.requests > 0 || ANALYTICS_SERVICE_CATEGORIES.some((service) => service.replace("House ", "") === item.service)).slice(0, 7);
+}
+function buildBarangayAnalytics(records, accessor, valueKey) {
+  return BARANGAYS.map((barangay) => ({
+    barangay,
+    [valueKey]: records.filter((record) => normalizeBarangayName(accessor(record)) === barangay).length,
+  })).filter((item) => item[valueKey] > 0).sort((a, b) => b[valueKey] - a[valueKey]).slice(0, 8);
+}
+function getWorkerRatingValue(worker) {
+  const directRating = Number(worker?.averageRating ?? worker?.average_rating);
+  if (Number.isFinite(directRating) && directRating > 0) {
+    return directRating;
+  }
+  const ratingText = Number.parseFloat(String(worker?.rating || "").replace(/[^0-9.]/g, ""));
+  if (Number.isFinite(ratingText) && ratingText > 0) {
+    return ratingText;
+  }
+  const reviews = worker?.receivedReviews || [];
+  const reviewRatings = reviews.map((review) => Number(review.rating)).filter((rating) => Number.isFinite(rating) && rating > 0);
+  if (!reviewRatings.length) {
+    return null;
+  }
+  return reviewRatings.reduce((sum, rating) => sum + rating, 0) / reviewRatings.length;
+}
+function buildRatingDistribution(workers) {
+  const ratings = workers.map(getWorkerRatingValue).filter((rating) => rating != null);
+  return [5, 4, 3, 2, 1].map((stars) => ({
+    stars: `${stars} star${stars > 1 ? "s" : ""}`,
+    count: ratings.filter((rating) => Math.round(rating) === stars).length,
+  }));
+}
+function isImagePreviewUrl(url) {
+  return /^blob:/i.test(String(url || "")) || /\.(png|jpe?g|gif|webp|bmp)$/i.test(String(url || "").split("?")[0]);
+}
 function formatScheduleLabel(scheduleType) {
   return (scheduleType || "").replace(" - ", "-");
 }
@@ -124,6 +249,42 @@ function formatLocation(barangay, streetAddress) {
 function buildTayabasLocationQuery(barangay, streetAddress) {
   return [streetAddress, barangay, "Tayabas City", "Quezon", "Philippines"].filter(Boolean).join(", ");
 }
+function normalizeBarangayName(value) {
+  const normalized = String(value || "").trim().replace(/^barangay\s+/i, "");
+  if (!normalized) {
+    return "";
+  }
+  return BARANGAYS.find((barangay) => barangay.toLowerCase() === normalized.toLowerCase()) || normalized;
+}
+function findTayabasBarangayFromText(value) {
+  const normalized = String(value || "").toLowerCase();
+  if (!normalized) {
+    return "";
+  }
+  return BARANGAYS.find((barangay) => {
+    const escapedBarangay = barangay.toLowerCase().replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    return new RegExp(`(?:^|[^a-z])(?:barangay\\s+)?${escapedBarangay}(?:$|[^a-z])`, "i").test(normalized);
+  }) || "";
+}
+function getFallbackBarangay(value = "") {
+  const matchedBarangay = findTayabasBarangayFromText(value) || BARANGAYS.find((barangay) => barangay.toLowerCase() === String(value || "").trim().replace(/^barangay\s+/i, "").toLowerCase());
+  return matchedBarangay || "Poblacion";
+}
+function getBarangayCenter(barangay) {
+  const resolvedBarangay = getFallbackBarangay(barangay);
+  return {
+    barangay: resolvedBarangay,
+    ...(BARANGAY_CENTERS[resolvedBarangay] || TAYABAS_CITY_CENTER),
+  };
+}
+function formatCoordinateAddress(latitude, longitude) {
+  const lat = Number(Number(latitude).toFixed(5));
+  const lon = Number(Number(longitude).toFixed(5));
+  return `Tayabas City coordinates ${lat}, ${lon}`;
+}
+function isGenericAddressPart(part) {
+  return /^(barangay\s+)?(tayabas|tayabas city|quezon|philippines|poblacion)$/i.test(String(part || "").trim());
+}
 function splitFullName(fullName, fallbackUsername = "") {
   const normalized = String(fullName || "").trim();
   if (!normalized) {
@@ -138,9 +299,25 @@ function splitFullName(fullName, fallbackUsername = "") {
 }
 function parseLocationLabel(locationLabel) {
   const parts = String(locationLabel || "").split(",").map((part) => part.trim()).filter(Boolean);
+  const barangayIndex = parts.findIndex((part) => BARANGAYS.some((barangay) => barangay.toLowerCase() === part.replace(/^barangay\s+/i, "").trim().toLowerCase()));
+  if (barangayIndex >= 0) {
+    const barangay = normalizeBarangayName(parts[barangayIndex]);
+    const streetParts = parts.filter((_, index) => index !== barangayIndex).filter((part) => !/^(tayabas|tayabas city|quezon|philippines)$/i.test(part));
+    return {
+      barangay,
+      streetAddress: streetParts.join(", "),
+    };
+  }
   return {
-    barangay: parts[0] || "",
+    barangay: normalizeBarangayName(parts[0] || ""),
     streetAddress: parts.slice(1).join(", "),
+  };
+}
+function getSavedHouseholdLocation(currentHousehold, currentUser) {
+  const profileLocation = parseLocationLabel(currentUser?.profile?.location_label || currentUser?.profile?.locationLabel || "");
+  return {
+    barangay: normalizeBarangayName(currentHousehold?.barangay || currentUser?.barangay || profileLocation.barangay || ""),
+    streetAddress: currentHousehold?.streetAddress || currentUser?.streetAddress || profileLocation.streetAddress || "",
   };
 }
 function formatDistance(distanceKm, fallbackLabel = "") {
@@ -235,13 +412,88 @@ async function loadLeafletAssets() {
   return leafletAssetsPromise;
 }
 function normalizeGeocodedAddress(address = {}, fallbackBarangay = "", fallbackStreetAddress = "") {
-  const barangay = address.neighbourhood || address.borough || address.suburb || address.quarter || address.locality || address.county || fallbackBarangay || "";
-  const streetAddress = [address.house_number, address.street || address.name || address.road || fallbackStreetAddress].filter(Boolean).join(" ").trim() || fallbackStreetAddress || "";
+  const labelParts = String(address.label || "").split(",").map((part) => part.trim()).filter(Boolean);
+  const addressParts = [
+    address.neighbourhood,
+    address.borough,
+    address.suburb,
+    address.quarter,
+    address.locality,
+    address.county,
+    ...labelParts,
+    fallbackBarangay,
+  ];
+  const barangay = normalizeBarangayName(addressParts.map(findTayabasBarangayFromText).find(Boolean) || fallbackBarangay || "");
+  const streetFromFields = [address.house_number, address.street || address.name || address.road].filter(Boolean).join(" ").trim();
+  const streetFromLabel = labelParts.find((part) => part !== barangay && !findTayabasBarangayFromText(part) && !isGenericAddressPart(part));
+  const streetAddress = streetFromFields || streetFromLabel || fallbackStreetAddress || "";
   return {
     barangay,
     streetAddress,
     locationLabel: formatLocation(barangay, streetAddress),
   };
+}
+function buildCoordinateLocation(latitude, longitude, fallbackBarangay = "", fallbackStreetAddress = "", source = "device", warning = "") {
+  const resolvedLatitude = Number(Number(latitude).toFixed(7));
+  const resolvedLongitude = Number(Number(longitude).toFixed(7));
+  const barangay = getFallbackBarangay(fallbackBarangay);
+  const streetAddress = fallbackStreetAddress || formatCoordinateAddress(resolvedLatitude, resolvedLongitude);
+  return {
+    latitude: resolvedLatitude,
+    longitude: resolvedLongitude,
+    barangay,
+    streetAddress,
+    locationLabel: formatLocation(barangay, streetAddress),
+    mapUrl: buildMapPreviewUrl(resolvedLatitude, resolvedLongitude),
+    source,
+    warning,
+  };
+}
+async function fetchBarangayCenter(barangay) {
+  if (!OPENROUTESERVICE_API_KEY) {
+    return null;
+  }
+  try {
+    const query = buildTayabasLocationQuery(barangay, "");
+    const response = await fetch(
+      `${OPENROUTESERVICE_SEARCH_URL}?text=${encodeURIComponent(query)}&boundary.country=PH&focus.point.lon=${encodeURIComponent(TAYABAS_CITY_CENTER.longitude)}&focus.point.lat=${encodeURIComponent(TAYABAS_CITY_CENTER.latitude)}&size=1&layers=locality,neighbourhood,address`,
+      { method: "GET", headers: getOpenRouteServiceHeaders() },
+    );
+    if (!response.ok) {
+      return null;
+    }
+    const data = await response.json();
+    const feature = Array.isArray(data?.features) ? data.features[0] : null;
+    const coordinates = Array.isArray(feature?.geometry?.coordinates) ? feature.geometry.coordinates : [];
+    const latitude = Number(Number(coordinates[1]).toFixed(7));
+    const longitude = Number(Number(coordinates[0]).toFixed(7));
+    if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) {
+      return null;
+    }
+    return { barangay, latitude, longitude };
+  } catch (error) {
+    return null;
+  }
+}
+async function getTayabasBarangayCenters() {
+  if (!tayabasBarangayCentersPromise) {
+    tayabasBarangayCentersPromise = Promise.resolve(BARANGAYS.map(getBarangayCenter));
+  }
+  return tayabasBarangayCentersPromise;
+}
+async function getNearestBarangayFromCoordinates(latitude, longitude) {
+  const centers = await getTayabasBarangayCenters();
+  let nearest = null;
+  centers.forEach((center) => {
+    const distanceKm = haversineDistanceKm(latitude, longitude, center.latitude, center.longitude);
+    if (distanceKm == null) {
+      return;
+    }
+    if (!nearest || distanceKm < nearest.distanceKm) {
+      nearest = { barangay: center.barangay, distanceKm };
+    }
+  });
+  return nearest?.barangay || "";
 }
 function getCurrentCoordinates() {
   if (typeof window === "undefined" || !window.navigator?.geolocation) {
@@ -260,38 +512,53 @@ function getCurrentCoordinates() {
   });
 }
 async function reverseGeocodeCoordinates(latitude, longitude, fallbackBarangay = "", fallbackStreetAddress = "") {
+  const coordinateStreetAddress = formatCoordinateAddress(latitude, longitude);
   if (!OPENROUTESERVICE_API_KEY) {
-    return null;
+    return buildCoordinateLocation(latitude, longitude, await getNearestBarangayFromCoordinates(latitude, longitude), coordinateStreetAddress, "device", "Reverse geocoding is unavailable right now, so the form used the map coordinates as the job address.");
   }
-  const response = await fetch(
-    `${OPENROUTESERVICE_REVERSE_URL}?point.lon=${encodeURIComponent(longitude)}&point.lat=${encodeURIComponent(latitude)}&size=1&layers=address,street,locality,neighbourhood`,
-    { method: "GET", headers: getOpenRouteServiceHeaders() },
-  );
-  if (!response.ok) {
-    return null;
+  let data = null;
+  try {
+    const response = await fetch(
+      `${OPENROUTESERVICE_REVERSE_URL}?point.lon=${encodeURIComponent(longitude)}&point.lat=${encodeURIComponent(latitude)}&size=1&layers=address,street,locality,neighbourhood`,
+      { method: "GET", headers: getOpenRouteServiceHeaders() },
+    );
+    if (!response.ok) {
+      return buildCoordinateLocation(latitude, longitude, await getNearestBarangayFromCoordinates(latitude, longitude), coordinateStreetAddress, "device", "Reverse geocoding could not find a precise address, so the form used the map coordinates.");
+    }
+    data = await response.json();
+  } catch (error) {
+    return buildCoordinateLocation(latitude, longitude, await getNearestBarangayFromCoordinates(latitude, longitude), coordinateStreetAddress, "device", "Reverse geocoding could not be reached, so the form used the map coordinates.");
   }
-  const data = await response.json();
   const feature = Array.isArray(data?.features) ? data.features[0] : null;
+  if (!feature) {
+    return buildCoordinateLocation(latitude, longitude, await getNearestBarangayFromCoordinates(latitude, longitude), coordinateStreetAddress, "device", "Reverse geocoding could not find a precise address, so the form used the map coordinates.");
+  }
   const coordinates = Array.isArray(feature?.geometry?.coordinates) ? feature.geometry.coordinates : [];
   const properties = feature?.properties || {};
   const normalized = normalizeGeocodedAddress({
+    label: properties.label,
     neighbourhood: properties.neighbourhood,
     borough: properties.borough,
     suburb: properties.suburb,
+    quarter: properties.quarter,
     locality: properties.locality,
     county: properties.county,
     house_number: properties.housenumber,
     street: properties.street,
     name: properties.name,
-  }, fallbackBarangay, fallbackStreetAddress);
+  }, "", coordinateStreetAddress);
   const resolvedLatitude = Number(Number(coordinates[1] ?? latitude).toFixed(7));
   const resolvedLongitude = Number(Number(coordinates[0] ?? longitude).toFixed(7));
+  const textBarangay = findTayabasBarangayFromText(normalized.barangay || properties.label || "");
+  const nearestBarangay = textBarangay ? "" : await getNearestBarangayFromCoordinates(resolvedLatitude, resolvedLongitude);
+  const barangay = getFallbackBarangay(textBarangay || nearestBarangay || normalized.barangay || properties.label);
+  const streetAddress = normalized.streetAddress || formatCoordinateAddress(resolvedLatitude, resolvedLongitude);
   return {
     latitude: resolvedLatitude,
     longitude: resolvedLongitude,
-    barangay: normalized.barangay,
-    streetAddress: normalized.streetAddress,
-    locationLabel: properties.label || normalized.locationLabel || formatLocation(fallbackBarangay, fallbackStreetAddress) || "Location selected",
+    barangay,
+    streetAddress,
+    locationLabel: properties.label || formatLocation(barangay, streetAddress),
     mapUrl: buildMapPreviewUrl(resolvedLatitude, resolvedLongitude),
     source: "device",
   };
@@ -319,9 +586,11 @@ async function geocodeAddressLocation(barangay, streetAddress) {
   const coordinates = Array.isArray(feature.geometry?.coordinates) ? feature.geometry.coordinates : [];
   const properties = feature.properties || {};
   const normalized = normalizeGeocodedAddress({
+    label: properties.label,
     neighbourhood: properties.neighbourhood,
     borough: properties.borough,
     suburb: properties.suburb,
+    quarter: properties.quarter,
     locality: properties.locality,
     county: properties.county,
     house_number: properties.housenumber,
@@ -336,7 +605,7 @@ async function geocodeAddressLocation(barangay, streetAddress) {
   return {
     latitude: resolvedLatitude,
     longitude: resolvedLongitude,
-    barangay: normalized.barangay || barangay,
+    barangay: getFallbackBarangay(normalized.barangay || properties.label || barangay),
     streetAddress: normalized.streetAddress || streetAddress,
     locationLabel: properties.label || normalized.locationLabel || query,
     mapUrl: buildMapPreviewUrl(resolvedLatitude, resolvedLongitude),
@@ -348,22 +617,14 @@ async function resolveLocationCoordinates(barangay, streetAddress, preferCurrent
   if (preferCurrentLocation) {
     const browserCoordinates = await getCurrentCoordinates();
     if (browserCoordinates) {
-      if (addressResult && browserCoordinates.accuracy > 120) {
-        return {
-          ...addressResult,
-          source: "address",
-          warning: `Your browser reported low location accuracy (${Math.round(browserCoordinates.accuracy)} meters), so the map was aligned to the entered address instead.`,
-          accuracy: browserCoordinates.accuracy,
-        };
-      }
       const reverseResult = await reverseGeocodeCoordinates(browserCoordinates.latitude, browserCoordinates.longitude, barangay, streetAddress);
       if (reverseResult && addressResult) {
         const deviationKm = haversineDistanceKm(reverseResult.latitude, reverseResult.longitude, addressResult.latitude, addressResult.longitude);
         if (deviationKm != null && deviationKm > 1.2 && browserCoordinates.accuracy > 60) {
           return {
-            ...addressResult,
-            source: "address",
-            warning: `Device location differed from the entered address by ${deviationKm.toFixed(1)} km, so the address-based map point was used.`,
+            ...reverseResult,
+            source: "device",
+            warning: `Device location differed from the entered address by ${deviationKm.toFixed(1)} km, so the shared location was used and the address fields were auto-filled from that pin.`,
             accuracy: browserCoordinates.accuracy,
           };
         }
@@ -383,13 +644,7 @@ async function resolveLocationCoordinates(barangay, streetAddress, preferCurrent
         };
       }
       return {
-        latitude: browserCoordinates.latitude,
-        longitude: browserCoordinates.longitude,
-        barangay,
-        streetAddress,
-        locationLabel: formatLocation(barangay, streetAddress),
-        mapUrl: buildMapPreviewUrl(browserCoordinates.latitude, browserCoordinates.longitude),
-        source: "device",
+        ...buildCoordinateLocation(browserCoordinates.latitude, browserCoordinates.longitude, "", streetAddress, "device", "We captured your current location and used the coordinates as the approximate address."),
         accuracy: browserCoordinates.accuracy,
       };
     }
@@ -475,25 +730,28 @@ function normalizeBackendWorker(currentUser) {
     return null;
   }
   const profile = currentUser.profile;
+  const locationParts = parseLocationLabel(profile.location_label);
   return {
     id: currentUser.id || currentUser.username,
     username: currentUser.username,
     firstName: currentUser.first_name || currentUser.firstName || "",
     lastName: currentUser.last_name || currentUser.lastName || "",
     email: currentUser.email || "",
-    phone: currentUser.phone || "",
-    barangay: currentUser.barangay || profile.location_label || "",
-    streetAddress: currentUser.streetAddress || "",
-    bio: currentUser.bio || "",
+    phone: profile.phone || currentUser.phone || "",
+    barangay: currentUser.barangay || locationParts.barangay || "",
+    streetAddress: currentUser.streetAddress || locationParts.streetAddress || "",
+    bio: profile.bio || currentUser.bio || "",
     hourlyRate: profile.hourly_rate || currentUser.hourlyRate || "0.00",
     dailyRate: profile.daily_rate || currentUser.dailyRate || "0.00",
-    yearsExperience: currentUser.yearsExperience || "0",
+    yearsExperience: profile.years_experience ?? currentUser.yearsExperience ?? "0",
     skills: profile.skills || currentUser.skills || [],
     verification: profile.verification_status === "verified" ? "Verified" : profile.verification_status === "pending" ? "Under Review" : profile.verification_status === "rejected" ? "Rejected" : "Not Yet Verified",
     rating: profile.display_rating || "No ratings yet",
     reviewsDone: profile.rating_count || 0,
     status: "Available",
     distanceKm: "0.00",
+    latitude: profile.latitude ?? currentUser.latitude ?? null,
+    longitude: profile.longitude ?? currentUser.longitude ?? null,
     avatar: (currentUser.displayName || currentUser.username || "W").slice(0, 1).toUpperCase(),
     receivedReviews: [],
     givenFeedback: [],
@@ -534,11 +792,14 @@ function normalizeProfileRecord(profile) {
     lastName,
     displayName,
     email: profile.email || "",
+    phone: profile.phone || "",
     barangay: locationParts.barangay,
     streetAddress: locationParts.streetAddress,
+    bio: profile.bio || "",
     skills: profile.skills || [],
     hourlyRate: profile.hourly_rate || "0.00",
     dailyRate: profile.daily_rate || "0.00",
+    yearsExperience: profile.years_experience ?? "0",
     verification: getWorkerVerificationLabel(profile.verification_status),
     rating: profile.display_rating || "No ratings yet",
     reviewsDone: profile.rating_count || 0,
@@ -633,6 +894,8 @@ function normalizeBackendJob(job) {
     description: job.description || "",
     barangay: job.location_label || job.barangay || "",
     streetAddress: job.street_address || "",
+    latitude: job.latitude ?? job.job_latitude ?? null,
+    longitude: job.longitude ?? job.job_longitude ?? null,
     offeredRate: String(job.service_rate ?? "0.00"),
     rateType: "Per Day",
     workersNeeded: Number(job.worker_slots || 1),
@@ -784,7 +1047,24 @@ function getWorkerJobMatches(worker, jobs) {
   });
 }
 function createJobRecord(jobForm, currentHousehold, jobId) {
-  return { id: jobId, householdUsername: currentHousehold?.username || "", householdName: getDisplayName(currentHousehold?.firstName, currentHousehold?.lastName, currentHousehold?.username), jobTitle: jobForm.jobTitle.trim() || jobForm.serviceType, serviceType: jobForm.serviceType, scheduleType: jobForm.scheduleType, preferredDate: jobForm.preferredDate, preferredTime: jobForm.preferredTime, description: jobForm.description.trim(), barangay: jobForm.barangay.trim(), streetAddress: jobForm.streetAddress.trim(), offeredRate: String(jobForm.offeredRate), rateType: jobForm.rateType, workersNeeded: getWorkersNeeded(jobForm), status: "Open", matchedWorkerIds: [], applications: [], createdAt: (/* @__PURE__ */ new Date()).toISOString() };
+  return { id: jobId, householdUsername: currentHousehold?.username || "", householdName: getDisplayName(currentHousehold?.firstName, currentHousehold?.lastName, currentHousehold?.username), jobTitle: jobForm.jobTitle.trim() || jobForm.serviceType, serviceType: jobForm.serviceType, scheduleType: jobForm.scheduleType, preferredDate: jobForm.preferredDate, preferredTime: jobForm.preferredTime, description: jobForm.description.trim(), barangay: jobForm.barangay.trim(), streetAddress: jobForm.streetAddress.trim(), latitude: jobForm.latitude ?? null, longitude: jobForm.longitude ?? null, offeredRate: String(jobForm.offeredRate), rateType: jobForm.rateType, workersNeeded: getWorkersNeeded(jobForm), status: "Open", matchedWorkerIds: [], applications: [], createdAt: (/* @__PURE__ */ new Date()).toISOString() };
+}
+function getDemoCreatedAt(monthOffset, day = 8) {
+  const date = new Date();
+  date.setMonth(date.getMonth() - monthOffset);
+  date.setDate(day);
+  date.setHours(9, 0, 0, 0);
+  return date.toISOString();
+}
+function createDemoJobPostings() {
+  return [
+    { id: "demo-job-1", householdUsername: "Household 1", householdName: "Household One", jobTitle: "House Cleaning Help", serviceType: "House Cleaning", scheduleType: "One-Time", preferredDate: "2026-05-18", preferredTime: "09:00", description: "General house cleaning for a small family home.", barangay: "Poblacion", streetAddress: "Demo Street 1", latitude: 13.9411, longitude: 121.5874, offeredRate: "700.00", rateType: "Per Day", workersNeeded: "1", status: "Open", matchedWorkerIds: ["demo-worker-1", "demo-worker-5"], applications: [{ id: "demo-app-1", workerId: "demo-worker-1", workerUsername: "Worker1", workerName: "Worker One", status: "Pending", appliedAt: "Recently" }], createdAt: getDemoCreatedAt(0, 3) },
+    { id: "demo-job-2", householdUsername: "Household 2", householdName: "Household Two", jobTitle: "Kitchen Plumbing Repair", serviceType: "Plumbing", scheduleType: "One-Time", preferredDate: "2026-05-20", preferredTime: "13:00", description: "Fix leaking kitchen sink.", barangay: "Isabang", streetAddress: "Demo Street 2", latitude: 13.9633, longitude: 121.5447, offeredRate: "950.00", rateType: "Fixed Rate", workersNeeded: "1", status: "Completed", matchedWorkerIds: ["demo-worker-2"], applications: [{ id: "demo-app-2", workerId: "demo-worker-2", workerUsername: "Worker2", workerName: "Worker Two", status: "Completed", appliedAt: "Recently" }], createdAt: getDemoCreatedAt(1, 5) },
+    { id: "demo-job-3", householdUsername: "Household 3", householdName: "Household Three", jobTitle: "Electrical Outlet Check", serviceType: "Electrical Work", scheduleType: "One-Time", preferredDate: "2026-04-12", preferredTime: "10:00", description: "Inspect and repair two electrical outlets.", barangay: "San Roque", streetAddress: "Demo Street 3", latitude: 13.9431, longitude: 121.5827, offeredRate: "1200.00", rateType: "Fixed Rate", workersNeeded: "1", status: "Completed", matchedWorkerIds: ["demo-worker-3"], applications: [{ id: "demo-app-3", workerId: "demo-worker-3", workerUsername: "Worker3", workerName: "Worker Three", status: "Completed", appliedAt: "Recently" }], createdAt: getDemoCreatedAt(2, 9) },
+    { id: "demo-job-4", householdUsername: "Household 4", householdName: "Household Four", jobTitle: "Laundry Assistance", serviceType: "Laundry", scheduleType: "Part-Time", preferredDate: "2026-03-22", preferredTime: "08:00", description: "Weekly laundry help.", barangay: "Calumpang", streetAddress: "Demo Street 4", latitude: 13.9404, longitude: 121.5528, offeredRate: "500.00", rateType: "Per Day", workersNeeded: "1", status: "Cancelled", matchedWorkerIds: ["demo-worker-5"], applications: [], createdAt: getDemoCreatedAt(3, 12) },
+    { id: "demo-job-5", householdUsername: "Household 5", householdName: "Household Five", jobTitle: "Childcare Support", serviceType: "Childcare", scheduleType: "Part-Time", preferredDate: "2026-02-15", preferredTime: "14:00", description: "Afternoon childcare support.", barangay: "Dapdap", streetAddress: "Demo Street 5", latitude: 13.9616, longitude: 121.6168, offeredRate: "750.00", rateType: "Per Day", workersNeeded: "1", status: "Open", matchedWorkerIds: ["demo-worker-4"], applications: [{ id: "demo-app-5", workerId: "demo-worker-4", workerUsername: "Worker4", workerName: "Worker Four", status: "Pending", appliedAt: "Recently" }], createdAt: getDemoCreatedAt(4, 15) },
+    { id: "demo-job-6", householdUsername: "Household 1", householdName: "Household One", jobTitle: "Cooking Support", serviceType: "Cooking", scheduleType: "One-Time", preferredDate: "2026-01-28", preferredTime: "16:00", description: "Meal preparation for family gathering.", barangay: "Poblacion", streetAddress: "Demo Street 1", latitude: 13.9411, longitude: 121.5874, offeredRate: "650.00", rateType: "Per Day", workersNeeded: "1", status: "Completed", matchedWorkerIds: ["demo-worker-5"], applications: [{ id: "demo-app-6", workerId: "demo-worker-5", workerUsername: "Worker5", workerName: "Worker Five", status: "Completed", appliedAt: "Recently" }], createdAt: getDemoCreatedAt(5, 18) },
+  ];
 }
 function getWorkerReviewSummary(worker) {
   const reviews = worker?.receivedReviews || [];
@@ -818,13 +1098,14 @@ function App() {
   const [forgotPasswordError, setForgotPasswordError] = useState("");
   const [forgotPasswordLoading, setForgotPasswordLoading] = useState(false);
   const [currentUser, setCurrentUser] = useState(null);
-  const [registeredWorkers, setRegisteredWorkers] = useState(() => getStoredCollection(STORAGE_KEYS.workers, []));
-  const [registeredHouseholds, setRegisteredHouseholds] = useState(() => getStoredCollection(STORAGE_KEYS.households, []));
-  const [verificationRequests, setVerificationRequests] = useState([]);
-  const [postedJobs, setPostedJobs] = useState(() => getStoredCollection(STORAGE_KEYS.jobs, []).map(normalizeJobRecord));
+  const [registeredWorkers, setRegisteredWorkers] = useState(() => mergeDemoRecords(getStoredCollection(STORAGE_KEYS.workers, []), DEMO_WORKER_ACCOUNTS));
+  const [registeredHouseholds, setRegisteredHouseholds] = useState(() => mergeDemoRecords(getStoredCollection(STORAGE_KEYS.households, []), DEMO_HOUSEHOLD_ACCOUNTS));
+  const [verificationRequests, setVerificationRequests] = useState(() => mergeDemoRecords(getStoredCollection(STORAGE_KEYS.verificationRequests, []), DEMO_VERIFICATION_REQUESTS, "id"));
+  const [postedJobs, setPostedJobs] = useState(() => mergeDemoRecords(getStoredCollection(STORAGE_KEYS.jobs, []).map(normalizeJobRecord), createDemoJobPostings(), "id"));
   const [backendNotifications, setBackendNotifications] = useState([]);
   const [selectedVerificationRequestId, setSelectedVerificationRequestId] = useState(null);
   const [adminSection, setAdminSection] = useState("verification");
+  const [superAdminSection, setSuperAdminSection] = useState("verification");
   const [selectedJobId, setSelectedJobId] = useState(null);
   const [selectedWorkerId, setSelectedWorkerId] = useState(null);
   const [notificationReads, setNotificationReads] = useState(() => getNotificationReadState());
@@ -843,6 +1124,13 @@ function App() {
   const [householdJobMapMode, setHouseholdJobMapMode] = useState("preview");
   const householdJobMapRef = useRef(null);
   const householdJobMapContainerIdRef = useRef(`household-job-map-${Math.random().toString(36).slice(2)}`);
+  const householdJobBarangaySyncRef = useRef(0);
+  useEffect(() => {
+    setRegisteredWorkers((prev) => mergeDemoRecords(prev, DEMO_WORKER_ACCOUNTS));
+    setRegisteredHouseholds((prev) => mergeDemoRecords(prev, DEMO_HOUSEHOLD_ACCOUNTS));
+    setVerificationRequests((prev) => mergeDemoRecords(prev, DEMO_VERIFICATION_REQUESTS, "id"));
+    setPostedJobs((prev) => mergeDemoRecords(prev.map(normalizeJobRecord), createDemoJobPostings(), "id"));
+  }, []);
   const backendCurrentWorker = normalizeBackendWorker(currentUser);
   const localCurrentWorker = registeredWorkers.find((item) => item.username === currentUser?.username) || null;
   const currentWorkerRequestFromProfile = normalizeVerificationRequest(currentUser?.profile?.verification_request);
@@ -898,7 +1186,8 @@ function App() {
   const householdNotificationsWithReadState = householdNotifications.map((item) => ({ ...item, unread: item.unread !== false && !notificationReads[item.id] }));
   const workerNotificationsWithReadState = workerNotifications.map((item) => ({ ...item, unread: item.unread !== false && !notificationReads[item.id] }));
   const workerApplications = currentWorker ? postedJobs.flatMap((job) => (job.applications || []).filter((application) => String(application.workerId) === String(currentWorker.id) || application.workerUsername === currentWorker.username).map((application) => ({ ...job, appliedAt: application.appliedAt, applicationStatus: application.status, applicationId: application.id }))) : [];
-  const currentWorkerJobDetail = workerVisibleJobs.find((item) => item.id === selectedJobId) || workerVisibleJobs[0] || null;
+  const selectedWorkerJob = selectedJobId == null ? null : postedJobs.find((item) => String(item.id) === String(selectedJobId));
+  const currentWorkerJobDetail = workerVisibleJobs.find((item) => String(item.id) === String(selectedJobId)) || selectedWorkerJob || workerVisibleJobs[0] || null;
   const currentWorkerJobHousehold = currentWorkerJobDetail ? registeredHouseholds.find((item) => item.username === currentWorkerJobDetail.householdUsername) : null;
   const adminVisibleWorkers = registeredWorkers.filter((worker) => Boolean(worker.verificationSubmission));
   const pendingVerificationRequests = verificationRequests.filter((item) => item.status === "Pending" || item.status === "Under Review");
@@ -1019,7 +1308,8 @@ function App() {
   useEffect(() => {
     let cancelled = false;
     async function loadDashboardMetrics() {
-      if (currentUser?.role !== "admin" && !getAuthToken()) {
+      const authToken = getAuthToken();
+      if (currentUser?.role !== "admin" || !authToken) {
         if (!cancelled) {
           setDashboardMetrics({
             openJobs: postedJobs.filter((job) => job.status === "Open").length,
@@ -1061,6 +1351,9 @@ function App() {
     window.localStorage.setItem(STORAGE_KEYS.households, JSON.stringify(registeredHouseholds));
   }, [registeredHouseholds]);
   useEffect(() => {
+    window.localStorage.setItem(STORAGE_KEYS.verificationRequests, JSON.stringify(verificationRequests));
+  }, [verificationRequests]);
+  useEffect(() => {
     window.localStorage.setItem(STORAGE_KEYS.jobs, JSON.stringify(postedJobs));
   }, [postedJobs]);
   useEffect(() => {
@@ -1084,6 +1377,25 @@ function App() {
       setSelectedJobId(householdJobs[0].id);
     }
   }, [householdJobs, selectedJobId]);
+  useEffect(() => {
+    if (view !== "household-post-job") {
+      return;
+    }
+    const savedLocation = getSavedHouseholdLocation(currentHousehold, currentUser);
+    if (!savedLocation.barangay && !savedLocation.streetAddress) {
+      return;
+    }
+    setHouseholdJobForm((prev) => {
+      if (prev.barangay && prev.streetAddress) {
+        return prev;
+      }
+      return {
+        ...prev,
+        barangay: prev.barangay || savedLocation.barangay,
+        streetAddress: prev.streetAddress || savedLocation.streetAddress,
+      };
+    });
+  }, [view, currentHousehold?.barangay, currentHousehold?.streetAddress, currentUser?.profile?.location_label, currentUser?.profile?.locationLabel]);
   useEffect(() => {
     if (view !== "household-post-job") {
       return;
@@ -1264,9 +1576,27 @@ function App() {
         L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
           attribution: "&copy; OpenStreetMap contributors",
         }).addTo(mapInstance);
+        if (householdJobMapMode === "manual") {
+          mapNode.classList.add("manual-pin-active");
+        }
+        let marker = null;
+        const syncMarker = async (latitude, longitude, source = "manual") => {
+          if (marker) {
+            marker.remove();
+          }
+          marker = L.marker([latitude, longitude], { draggable: true }).addTo(mapInstance);
+          marker.on("dragend", async () => {
+            const draggedPoint = marker.getLatLng();
+            try {
+              await placeHouseholdJobPin(draggedPoint.lat, draggedPoint.lng, source, true);
+            } catch (error) {
+              window.alert("We could not update the dragged pin yet. Please try again.");
+            }
+          });
+        };
         if (householdJobLocationPreview?.latitude != null && householdJobLocationPreview?.longitude != null) {
           mapInstance.setView([householdJobLocationPreview.latitude, householdJobLocationPreview.longitude], 15);
-          L.marker([householdJobLocationPreview.latitude, householdJobLocationPreview.longitude]).addTo(mapInstance);
+          await syncMarker(householdJobLocationPreview.latitude, householdJobLocationPreview.longitude, householdJobLocationPreview.source || "manual");
         } else {
           mapInstance.setView([12.8797, 121.774], 6);
         }
@@ -1275,6 +1605,7 @@ function App() {
             return;
           }
           try {
+            await syncMarker(event.latlng.lat, event.latlng.lng, "manual");
             await placeHouseholdJobPin(event.latlng.lat, event.latlng.lng, "manual", true);
           } catch (error) {
             window.alert("We could not use that pin yet. Please try another nearby spot.");
@@ -1338,6 +1669,51 @@ function App() {
     };
   }, [view, selectedJob, selectedWorker]);
   useEffect(() => {
+    if (view !== "household-worker-profile" || !selectedJob || !selectedWorker) {
+      return;
+    }
+    const targetColumn = document.querySelector(".worker-content .row.g-3 .col-lg-8");
+    if (!targetColumn || targetColumn.querySelector("[data-distance-location-map]")) {
+      return;
+    }
+    const household = currentHousehold || registeredHouseholds.find((item) => item.username === selectedJob.householdUsername);
+    const jobLatitude = selectedJob.latitude ?? household?.latitude ?? null;
+    const jobLongitude = selectedJob.longitude ?? household?.longitude ?? null;
+    const workerLatitude = selectedWorker.latitude ?? null;
+    const workerLongitude = selectedWorker.longitude ?? null;
+    const distanceKm = haversineDistanceKm(jobLatitude, jobLongitude, workerLatitude, workerLongitude);
+    const panel = document.createElement("div");
+    panel.className = "profile-card mb-3";
+    panel.dataset.distanceLocationMap = "true";
+    const head = document.createElement("div");
+    head.className = "profile-card-head";
+    head.textContent = "Distance & Location";
+    const body = document.createElement("div");
+    body.className = "p-3";
+    panel.append(head, body);
+    const skillsCard = Array.from(targetColumn.querySelectorAll(".profile-card")).find((card) => card.textContent.includes("Skills & Expertise"));
+    if (skillsCard?.nextSibling) {
+      targetColumn.insertBefore(panel, skillsCard.nextSibling);
+    } else {
+      targetColumn.append(panel);
+    }
+    const root = createRoot(body);
+    root.render(React.createElement(LocationDistanceMap, {
+      userLatitude: jobLatitude,
+      userLongitude: jobLongitude,
+      targetLatitude: workerLatitude,
+      targetLongitude: workerLongitude,
+      userLocation: formatLocation(household?.barangay || selectedJob.barangay, household?.streetAddress || selectedJob.streetAddress),
+      targetLocation: formatLocation(selectedWorker.barangay, selectedWorker.streetAddress),
+      distanceKm,
+      formatDistanceFn: formatDistance,
+    }));
+    return () => {
+      root.unmount();
+      panel.remove();
+    };
+  }, [view, selectedJob, selectedWorker, currentHousehold, registeredHouseholds]);
+  useEffect(() => {
     if (view !== "worker-job-detail" || !currentWorkerJobDetail) {
       return;
     }
@@ -1386,6 +1762,50 @@ function App() {
     return () => panel.remove();
   }, [view, currentWorkerJobDetail, currentWorkerJobHousehold]);
   useEffect(() => {
+    if (view !== "worker-job-detail" || !currentWorkerJobDetail || !currentWorker) {
+      return;
+    }
+    const workerContent = document.querySelector(".worker-content");
+    if (!workerContent || workerContent.querySelector("[data-worker-job-distance-map]")) {
+      return;
+    }
+    const jobLatitude = currentWorkerJobDetail.latitude ?? currentWorkerJobHousehold?.latitude ?? null;
+    const jobLongitude = currentWorkerJobDetail.longitude ?? currentWorkerJobHousehold?.longitude ?? null;
+    const workerLatitude = currentWorker.latitude ?? null;
+    const workerLongitude = currentWorker.longitude ?? null;
+    const distanceKm = haversineDistanceKm(workerLatitude, workerLongitude, jobLatitude, jobLongitude);
+    const panel = document.createElement("div");
+    panel.className = "profile-card mt-3";
+    panel.dataset.workerJobDistanceMap = "true";
+    const head = document.createElement("div");
+    head.className = "profile-card-head";
+    head.textContent = "Distance & Location";
+    const body = document.createElement("div");
+    body.className = "p-3";
+    panel.append(head, body);
+    const firstCard = workerContent.querySelector(".profile-card");
+    if (firstCard?.nextSibling) {
+      workerContent.insertBefore(panel, firstCard.nextSibling);
+    } else {
+      workerContent.append(panel);
+    }
+    const root = createRoot(body);
+    root.render(React.createElement(LocationDistanceMap, {
+      userLatitude: workerLatitude,
+      userLongitude: workerLongitude,
+      targetLatitude: jobLatitude,
+      targetLongitude: jobLongitude,
+      userLocation: formatLocation(currentWorker.barangay, currentWorker.streetAddress),
+      targetLocation: formatLocation(currentWorkerJobHousehold?.barangay || currentWorkerJobDetail.barangay, currentWorkerJobHousehold?.streetAddress || currentWorkerJobDetail.streetAddress),
+      distanceKm,
+      formatDistanceFn: formatDistance,
+    }));
+    return () => {
+      root.unmount();
+      panel.remove();
+    };
+  }, [view, currentWorkerJobDetail, currentWorkerJobHousehold, currentWorker]);
+  useEffect(() => {
     if (view !== "worker-job-detail" || !currentWorkerJobDetail) {
       return;
     }
@@ -1416,6 +1836,37 @@ function App() {
     if (view !== "worker-find-jobs") {
       return;
     }
+    const getDistancePoint = (record) => {
+      const latitude = record?.latitude ?? null;
+      const longitude = record?.longitude ?? null;
+      if (latitude !== null && longitude !== null && Number.isFinite(Number(latitude)) && Number.isFinite(Number(longitude))) {
+        return { latitude, longitude };
+      }
+      return getBarangayCenter(record?.barangay || "");
+    };
+    const actionCards = Array.from(document.querySelectorAll("button")).filter((button) => button.textContent.includes("View Details") || button.textContent.includes("Apply Now")).map((button) => button.closest(".profile-card") || button.parentElement).filter(Boolean);
+    [...new Set(actionCards)].forEach((card, index) => {
+      if (card.querySelector("[data-worker-job-distance]")) {
+        return;
+      }
+      const job = workerVisibleJobs[index];
+      if (!job || !currentWorker) {
+        return;
+      }
+      const household = registeredHouseholds.find((item) => item.username === job.householdUsername);
+      const workerPoint = getDistancePoint(currentWorker);
+      const jobPoint = getDistancePoint({
+        barangay: household?.barangay || job.barangay,
+        latitude: job.latitude ?? household?.latitude ?? null,
+        longitude: job.longitude ?? household?.longitude ?? null,
+      });
+      const distanceKm = haversineDistanceKm(workerPoint.latitude, workerPoint.longitude, jobPoint.latitude, jobPoint.longitude);
+      const badge = document.createElement("div");
+      badge.dataset.workerJobDistance = "true";
+      badge.className = "worker-job-distance-badge";
+      badge.textContent = formatDistance(distanceKm);
+      card.appendChild(badge);
+    });
     const applyButtons = Array.from(document.querySelectorAll("button")).filter((button) => button.textContent.includes("Apply Now"));
     applyButtons.forEach((button) => {
       const card = button.closest(".profile-card") || button.parentElement;
@@ -1438,7 +1889,7 @@ function App() {
         card.appendChild(badge);
       }
     });
-  }, [view, currentWorker?.verification]);
+  }, [view, currentWorker, currentWorker?.verification, workerVisibleJobs, registeredHouseholds]);
   useEffect(() => {
     if (view !== "household-worker-profile" || !selectedWorker) {
       return;
@@ -1643,28 +2094,9 @@ function App() {
     return () => alert.remove();
   }, [view, currentWorker]);
   useEffect(() => {
-    const sidebar = document.querySelector(".worker-sidebar");
-    if (!sidebar) {
-      return;
-    }
-    if (!sidebar.querySelector("[data-sidebar-logout]")) {
-      const footer = document.createElement("div");
-      footer.dataset.sidebarLogout = "true";
-      footer.className = "worker-sidebar-footer";
-      const logoutButton = document.createElement("button");
-      logoutButton.type = "button";
-      logoutButton.className = "worker-sidebar-logout";
-      logoutButton.textContent = "Log Out";
-      logoutButton.addEventListener("click", handleLogout);
-      footer.appendChild(logoutButton);
-      sidebar.appendChild(footer);
-    }
-    const topbarButtons = Array.from(document.querySelectorAll(".worker-topbar .btn.btn-outline-secondary.btn-sm"));
-    topbarButtons.forEach((button) => {
-      const label = (button.textContent || "").trim();
-      if (label === "Log Out" || label === "Back") {
-        button.style.display = "none";
-      }
+    document.querySelectorAll("[data-sidebar-logout]").forEach((node) => node.remove());
+    document.querySelectorAll(".worker-topbar .btn.btn-outline-secondary.btn-sm").forEach((button) => {
+      button.style.display = "";
     });
   }, [view, currentUser]);
   function goHome() {
@@ -1890,9 +2322,9 @@ function App() {
           receivedReviews: existing?.receivedReviews || [],
           givenFeedback: existing?.givenFeedback || [],
           avatar: existing?.avatar || (workerProfile.firstName || workerProfile.username || "W").slice(0, 1).toUpperCase(),
-          bio: existing?.bio || "",
-          phone: existing?.phone || "",
-          yearsExperience: existing?.yearsExperience || "0",
+          bio: workerProfile.bio || existing?.bio || "",
+          phone: workerProfile.phone || existing?.phone || "",
+          yearsExperience: workerProfile.yearsExperience ?? existing?.yearsExperience ?? "0",
           status: existing?.status || "Available",
           distanceKm: existing?.distanceKm || "0.00",
           distanceLabel: existing?.distanceLabel || "",
@@ -2033,9 +2465,8 @@ function App() {
     setView("household-dashboard");
   }
   function openHouseholdPostJob() {
-    if (currentHousehold) {
-      setHouseholdJobForm((prev) => ({ ...prev, barangay: prev.barangay || currentHousehold.barangay || "", streetAddress: prev.streetAddress || currentHousehold.streetAddress || "" }));
-    }
+    const savedLocation = getSavedHouseholdLocation(currentHousehold, currentUser);
+    setHouseholdJobForm((prev) => ({ ...prev, barangay: savedLocation.barangay, streetAddress: savedLocation.streetAddress }));
     setHouseholdJobCoordinates(null);
     setHouseholdJobLocationPreview(null);
     setView("household-post-job");
@@ -2147,8 +2578,8 @@ function App() {
     setHouseholdJobLocationPreview(resolvedLocation);
     setHouseholdJobForm((prev) => ({
       ...prev,
-      barangay: resolvedLocation.barangay || prev.barangay,
-      streetAddress: resolvedLocation.streetAddress || prev.streetAddress,
+      barangay: getFallbackBarangay(resolvedLocation.barangay || prev.barangay),
+      streetAddress: resolvedLocation.streetAddress || formatCoordinateAddress(resolvedLocation.latitude, resolvedLocation.longitude),
     }));
     if (showSuccessMessage) {
       if (resolvedLocation.warning) {
@@ -2161,12 +2592,15 @@ function App() {
   }
   async function placeHouseholdJobPin(latitude, longitude, source = "manual", showSuccessMessage = false) {
     const reverseResult = await reverseGeocodeCoordinates(latitude, longitude, householdJobForm.barangay, householdJobForm.streetAddress);
+    const fallbackLocation = buildCoordinateLocation(latitude, longitude, await getNearestBarangayFromCoordinates(latitude, longitude), formatCoordinateAddress(latitude, longitude), source);
+    const resolvedBarangay = getFallbackBarangay(reverseResult?.barangay || fallbackLocation.barangay);
+    const resolvedStreetAddress = reverseResult?.streetAddress || fallbackLocation.streetAddress || formatCoordinateAddress(latitude, longitude);
     const resolvedLocation = {
       latitude: Number(Number(latitude).toFixed(7)),
       longitude: Number(Number(longitude).toFixed(7)),
-      barangay: reverseResult?.barangay || householdJobForm.barangay,
-      streetAddress: reverseResult?.streetAddress || householdJobForm.streetAddress,
-      locationLabel: reverseResult?.locationLabel || formatLocation(reverseResult?.barangay || householdJobForm.barangay, reverseResult?.streetAddress || householdJobForm.streetAddress),
+      barangay: resolvedBarangay,
+      streetAddress: resolvedStreetAddress,
+      locationLabel: reverseResult?.locationLabel || formatLocation(resolvedBarangay, resolvedStreetAddress),
       mapUrl: buildMapPreviewUrl(latitude, longitude),
       source,
       warning: source === "manual" ? "Manual pin placed. Review the auto-filled address before posting." : reverseResult?.warning || "",
@@ -2175,14 +2609,57 @@ function App() {
     setHouseholdJobLocationPreview(resolvedLocation);
     setHouseholdJobForm((prev) => ({
       ...prev,
-      barangay: resolvedLocation.barangay || prev.barangay,
-      streetAddress: resolvedLocation.streetAddress || prev.streetAddress,
+      barangay: getFallbackBarangay(resolvedLocation.barangay || prev.barangay),
+      streetAddress: resolvedLocation.streetAddress || formatCoordinateAddress(resolvedLocation.latitude, resolvedLocation.longitude),
     }));
     setHouseholdJobMapMode("preview");
     if (showSuccessMessage) {
       window.alert(source === "manual" ? "Manual pin saved. Barangay and street fields were updated automatically." : "Location updated.");
     }
     return resolvedLocation;
+  }
+  async function syncHouseholdJobBarangayLocation(barangay) {
+    const selectedBarangay = getFallbackBarangay(barangay);
+    if (!selectedBarangay) {
+      return null;
+    }
+    const syncId = householdJobBarangaySyncRef.current + 1;
+    householdJobBarangaySyncRef.current = syncId;
+    const barangayCenter = getBarangayCenter(selectedBarangay);
+    const fallbackLocation = buildCoordinateLocation(barangayCenter.latitude, barangayCenter.longitude, selectedBarangay, `Barangay ${selectedBarangay}, Tayabas City`, "address");
+    setHouseholdJobCoordinates({ latitude: fallbackLocation.latitude, longitude: fallbackLocation.longitude });
+    setHouseholdJobLocationPreview(fallbackLocation);
+    setHouseholdJobMapMode("preview");
+    setHouseholdJobForm((prev) => ({
+      ...prev,
+      barangay: selectedBarangay,
+      streetAddress: fallbackLocation.streetAddress,
+    }));
+    let resolvedLocation = null;
+    try {
+      resolvedLocation = await geocodeAddressLocation(selectedBarangay, "");
+    } catch (error) {
+      resolvedLocation = null;
+    }
+    if (!resolvedLocation || householdJobBarangaySyncRef.current !== syncId) {
+      return fallbackLocation;
+    }
+    const nextLocation = resolvedLocation ? {
+      ...resolvedLocation,
+      barangay: selectedBarangay,
+      streetAddress: resolvedLocation.streetAddress || `Barangay ${selectedBarangay}, Tayabas City`,
+      locationLabel: resolvedLocation.locationLabel || formatLocation(selectedBarangay, resolvedLocation.streetAddress || `Barangay ${selectedBarangay}, Tayabas City`),
+      source: "address",
+    } : fallbackLocation;
+    setHouseholdJobCoordinates({ latitude: nextLocation.latitude, longitude: nextLocation.longitude });
+    setHouseholdJobLocationPreview(nextLocation);
+    setHouseholdJobMapMode("preview");
+    setHouseholdJobForm((prev) => ({
+      ...prev,
+      barangay: selectedBarangay,
+      streetAddress: nextLocation.streetAddress || `Barangay ${selectedBarangay}, Tayabas City`,
+    }));
+    return nextLocation;
   }
   function handleApplyToJob(jobId) {
     if (!currentWorker) {
@@ -2499,7 +2976,17 @@ function App() {
   }
   function handleHouseholdJobChange(event) {
     const { name, value } = event.target;
-    if (name === "barangay" || name === "streetAddress") {
+    if (name === "barangay") {
+      setHouseholdJobForm((prev) => ({ ...prev, barangay: value, streetAddress: value ? `Barangay ${value}, Tayabas City` : prev.streetAddress }));
+      if (value) {
+        syncHouseholdJobBarangayLocation(value);
+      } else {
+        setHouseholdJobCoordinates(null);
+        setHouseholdJobLocationPreview(null);
+      }
+      return;
+    }
+    if (name === "streetAddress") {
       setHouseholdJobCoordinates(null);
       setHouseholdJobLocationPreview(null);
     }
@@ -2543,9 +3030,18 @@ function App() {
   function handleLoginSubmit(event) {
     event.preventDefault();
     const username = loginForm.username.trim();
-    const isFallbackAdminLogin = username.toLowerCase() === ADMIN_ACCOUNT.username && loginForm.password === ADMIN_ACCOUNT.password;
+    const demoPassword = loginForm.password.trim();
+    const normalizedUsername = username.toLowerCase();
+    const isSuperAdminLogin = normalizedUsername === SUPER_ADMIN_ACCOUNT.username && demoPassword === SUPER_ADMIN_ACCOUNT.password;
     if (!username || !loginForm.password) {
       window.alert("Please enter your username and password.");
+      return;
+    }
+    if (isSuperAdminLogin) {
+      clearAuthToken();
+      setCurrentUser({ role: "admin", username: SUPER_ADMIN_ACCOUNT.username, displayName: SUPER_ADMIN_ACCOUNT.displayName, isSuperAdmin: true });
+      setSuperAdminSection("verification");
+      setView("superadmin-dashboard");
       return;
     }
     (async () => {
@@ -2587,14 +3083,8 @@ function App() {
         if (backendWorker) {
           mergeBackendWorkerIntoState(backendWorker);
         }
-        setView(resolvedRole === "admin" ? "admin-dashboard" : resolvedRole === "household" ? "household-dashboard" : "worker-dashboard");
+        setView(resolvedRole === "superadmin" ? "superadmin-dashboard" : resolvedRole === "admin" ? "admin-dashboard" : resolvedRole === "household" ? "household-dashboard" : "worker-dashboard");
       } catch (error) {
-        if (isFallbackAdminLogin) {
-          clearAuthToken();
-          setCurrentUser({ role: "admin", username: ADMIN_ACCOUNT.username, displayName: ADMIN_ACCOUNT.displayName });
-          setView("admin-dashboard");
-          return;
-        }
         if (loginForm.role === "worker") {
           const worker = registeredWorkers.find((item) => item.username.toLowerCase() === username.toLowerCase());
           if (!worker || worker.password !== loginForm.password) {
@@ -2654,6 +3144,9 @@ function App() {
             first_name: workerForm.firstName.trim(),
             last_name: workerForm.lastName.trim(),
             role: "worker",
+            phone: workerForm.phone.trim(),
+            bio: workerForm.bio.trim(),
+            years_experience: Number(workerForm.yearsExperience || 0),
             skills: Array.from(new Set([...workerForm.skills || [], ...(workerForm.customSkill.trim() ? [workerForm.customSkill.trim()] : [])])),
             hourly_rate: workerForm.hourlyRate,
             daily_rate: workerForm.dailyRate,
@@ -2666,6 +3159,7 @@ function App() {
         if (!response.ok) {
           throw new Error(getApiErrorMessage(data, "Unable to create worker account."));
         }
+        const backendWorker = normalizeBackendWorkerPayload({ user: data?.user, profile: data?.profile });
         const workerAccount = {
           ...workerForm,
           skills: Array.from(new Set([...workerForm.skills || [], ...(workerForm.customSkill.trim() ? [workerForm.customSkill.trim()] : [])])),
@@ -2684,7 +3178,7 @@ function App() {
           verificationNotifications: [],
           applicationNotifications: [],
         };
-        setRegisteredWorkers((prev) => [...prev, workerAccount]);
+        setRegisteredWorkers((prev) => [backendWorker || workerAccount, ...prev.filter((item) => item.username?.toLowerCase() !== workerAccount.username.toLowerCase())]);
         setWorkerForm(EMPTY_WORKER_FORM);
         setLoginForm({ username: "", password: "", role: "worker" });
         setView("login");
@@ -2763,17 +3257,83 @@ function App() {
       window.alert("No worker account is currently logged in.");
       return;
     }
-    setRegisteredWorkers((prev) => prev.map((item) => {
-      if (item.username !== currentUser.username) {
-        return item;
+    (async () => {
+      const resolvedLocation = await resolveLocationCoordinates(workerProfileForm.barangay, workerProfileForm.streetAddress, false);
+      const nextWorkerPatch = {
+        firstName: workerProfileForm.firstName,
+        lastName: workerProfileForm.lastName,
+        email: workerProfileForm.email,
+        phone: workerProfileForm.phone,
+        barangay: workerProfileForm.barangay,
+        streetAddress: workerProfileForm.streetAddress,
+        bio: workerProfileForm.bio,
+        hourlyRate: workerProfileForm.hourlyRate,
+        dailyRate: workerProfileForm.dailyRate,
+        yearsExperience: workerProfileForm.yearsExperience,
+        skills: workerProfileForm.skills,
+        latitude: resolvedLocation?.latitude ?? currentWorker?.latitude ?? null,
+        longitude: resolvedLocation?.longitude ?? currentWorker?.longitude ?? null,
+      };
+      try {
+        if (getAuthToken()) {
+          const response = await apiRequest("accounts/me/", {
+            method: "PATCH",
+            auth: true,
+            body: {
+              first_name: workerProfileForm.firstName,
+              last_name: workerProfileForm.lastName,
+              email: workerProfileForm.email,
+              phone: workerProfileForm.phone,
+              bio: workerProfileForm.bio,
+              years_experience: Number(workerProfileForm.yearsExperience || 0),
+              role: "worker",
+              skills: workerProfileForm.skills,
+              hourly_rate: workerProfileForm.hourlyRate,
+              daily_rate: workerProfileForm.dailyRate,
+              location_label: resolvedLocation?.locationLabel || formatLocation(workerProfileForm.barangay, workerProfileForm.streetAddress),
+              latitude: nextWorkerPatch.latitude,
+              longitude: nextWorkerPatch.longitude,
+            },
+          });
+          const data = await readResponseData(response);
+          if (!response.ok) {
+            throw new Error(getApiErrorMessage(data, "Unable to update worker profile."));
+          }
+          const backendWorker = normalizeBackendWorkerPayload({ user: data?.user || { username: currentUser.username, email: workerProfileForm.email, first_name: workerProfileForm.firstName, last_name: workerProfileForm.lastName }, profile: data?.profile });
+          if (backendWorker) {
+            mergeBackendWorkerIntoState({ ...backendWorker, profilePhotoPreview: workerProfileForm.profilePhotoPreview || backendWorker.profilePhotoPreview || "" });
+          }
+        }
+        setRegisteredWorkers((prev) => prev.map((item) => {
+          if (item.username !== currentUser.username) {
+            return item;
+          }
+          return { ...item, ...nextWorkerPatch, profilePhotoPreview: workerProfileForm.profilePhotoPreview || item.profilePhotoPreview || "", receivedReviews: item.receivedReviews || [], givenFeedback: item.givenFeedback || [] };
+        }));
+        setCurrentUser((prev) => {
+          if (!prev) return prev;
+          return {
+            ...prev,
+            displayName: getDisplayName(workerProfileForm.firstName, workerProfileForm.lastName, workerProfileForm.username),
+            profile: prev.profile ? {
+              ...prev.profile,
+              phone: workerProfileForm.phone,
+              bio: workerProfileForm.bio,
+              years_experience: Number(workerProfileForm.yearsExperience || 0),
+              skills: workerProfileForm.skills,
+              hourly_rate: workerProfileForm.hourlyRate,
+              daily_rate: workerProfileForm.dailyRate,
+              location_label: resolvedLocation?.locationLabel || formatLocation(workerProfileForm.barangay, workerProfileForm.streetAddress),
+              latitude: nextWorkerPatch.latitude,
+              longitude: nextWorkerPatch.longitude,
+            } : prev.profile,
+          };
+        });
+        window.alert("Worker profile updated.");
+      } catch (error) {
+        window.alert(error.message || "Unable to update worker profile.");
       }
-      return { ...item, firstName: workerProfileForm.firstName, lastName: workerProfileForm.lastName, email: workerProfileForm.email, phone: workerProfileForm.phone, barangay: workerProfileForm.barangay, streetAddress: workerProfileForm.streetAddress, bio: workerProfileForm.bio, hourlyRate: workerProfileForm.hourlyRate, dailyRate: workerProfileForm.dailyRate, yearsExperience: workerProfileForm.yearsExperience, skills: workerProfileForm.skills, profilePhotoPreview: workerProfileForm.profilePhotoPreview || item.profilePhotoPreview || "", receivedReviews: item.receivedReviews || [], givenFeedback: item.givenFeedback || [] };
-    }));
-    setCurrentUser((prev) => {
-      if (!prev) return prev;
-      return { ...prev, displayName: getDisplayName(workerProfileForm.firstName, workerProfileForm.lastName, workerProfileForm.username) };
-    });
-    window.alert("Worker profile updated.");
+    })();
   }
   function handleVerificationSubmit(event) {
     event.preventDefault();
@@ -2847,7 +3407,13 @@ function App() {
     }));
     setCurrentUser((prev) => {
       if (!prev) return prev;
-      return { ...prev, displayName: getDisplayName(householdProfileForm.firstName, householdProfileForm.lastName, householdProfileForm.username) };
+      return {
+        ...prev,
+        barangay: householdProfileForm.barangay,
+        streetAddress: householdProfileForm.streetAddress,
+        displayName: getDisplayName(householdProfileForm.firstName, householdProfileForm.lastName, householdProfileForm.username),
+        profile: prev.profile ? { ...prev.profile, location_label: formatLocation(householdProfileForm.barangay, householdProfileForm.streetAddress) } : prev.profile,
+      };
     });
     setPostedJobs((prev) => prev.map((job) => {
       if (job.householdUsername !== currentUser.username) {
@@ -3036,14 +3602,15 @@ function App() {
         await refreshJobsFromBackend();
         window.alert("Job posted successfully.");
       } catch (error) {
-        const newJob = createJobRecord(householdJobForm, currentHousehold, Date.now());
+        const newJob = createJobRecord({ ...householdJobForm, latitude: resolvedLatitude, longitude: resolvedLongitude }, currentHousehold, Date.now());
         setPostedJobs((prev) => [newJob, ...prev]);
         setSelectedJobId(newJob.id);
         window.alert(error.message || "Job posted locally.");
       } finally {
+        const savedLocation = getSavedHouseholdLocation(currentHousehold, currentUser);
         setHouseholdJobCoordinates(null);
         setHouseholdJobLocationPreview(null);
-        setHouseholdJobForm({ jobTitle: "", serviceType: "", scheduleType: "One - Time", preferredDate: "", preferredTime: "", description: "", barangay: currentHousehold?.barangay || "", streetAddress: currentHousehold?.streetAddress || "", offeredRate: "0.00", rateType: "Per Day", workersNeeded: "1" });
+        setHouseholdJobForm({ jobTitle: "", serviceType: "", scheduleType: "One - Time", preferredDate: "", preferredTime: "", description: "", barangay: savedLocation.barangay, streetAddress: savedLocation.streetAddress, offeredRate: "0.00", rateType: "Per Day", workersNeeded: "1" });
         setView("household-my-jobs");
       }
     })();
@@ -3056,7 +3623,7 @@ function App() {
         const response = await apiRequest(`common/verification-requests/${requestId}/review/`, {
           method: "POST",
           auth: false,
-          body: { action: "approve", reviewed_by: currentUser?.displayName || ADMIN_ACCOUNT.displayName },
+          body: { action: "approve", reviewed_by: currentUser?.displayName || "Super Admin" },
         });
         const data = await readResponseData(response);
         if (!response.ok) {
@@ -3075,11 +3642,11 @@ function App() {
         await refreshNotificationsFromBackend();
         window.alert("Verification approved. Worker is now Verified.");
         setSelectedVerificationRequestId(requestId);
-        setView("admin-dashboard");
+        setView(currentUser?.isSuperAdmin ? "superadmin-dashboard" : "admin-dashboard");
       } catch (error) {
         window.alert(error.message || `Verified ${request.workerName}.`);
         setSelectedVerificationRequestId(requestId);
-        setView("admin-dashboard");
+        setView(currentUser?.isSuperAdmin ? "superadmin-dashboard" : "admin-dashboard");
       }
     })();
   }
@@ -3092,7 +3659,7 @@ function App() {
         const response = await apiRequest(`common/verification-requests/${requestId}/review/`, {
           method: "POST",
           auth: false,
-          body: { action: "reject", review_note: reviewNote, reviewed_by: currentUser?.displayName || ADMIN_ACCOUNT.displayName },
+          body: { action: "reject", review_note: reviewNote, reviewed_by: currentUser?.displayName || "Super Admin" },
         });
         const data = await readResponseData(response);
         if (!response.ok) {
@@ -3111,13 +3678,634 @@ function App() {
         await refreshNotificationsFromBackend();
         window.alert("Verification rejected. Please check admin review notes.");
         setSelectedVerificationRequestId(requestId);
-        setView("admin-dashboard");
+        setView(currentUser?.isSuperAdmin ? "superadmin-dashboard" : "admin-dashboard");
       } catch (error) {
         window.alert(error.message || `Rejected ${request.workerName}.`);
         setSelectedVerificationRequestId(requestId);
-        setView("admin-dashboard");
+        setView(currentUser?.isSuperAdmin ? "superadmin-dashboard" : "admin-dashboard");
       }
     })();
+  }
+  function renderSuperAdminDashboard() {
+    const totalApplications = postedJobs.reduce((sum, job) => sum + (job.applications || []).length, 0);
+    const activeApplications = postedJobs.reduce((sum, job) => sum + (job.applications || []).filter((application) => !["Rejected", "Completed", "Cancelled"].includes(application.status)).length, 0);
+    const ongoingMatches = postedJobs.filter((job) => (job.applications || []).some((application) => application.status === "Hired")).length;
+    const cancelledRequests = postedJobs.filter((job) => job.status === "Cancelled").length;
+    const completedServices = postedJobs.filter((job) => job.status === "Completed").length;
+    const verifiedWorkers = registeredWorkers.filter((worker) => worker.verification === "Verified").length;
+    const totalUsers = registeredWorkers.length + registeredHouseholds.length;
+    const verifiedPercent = registeredWorkers.length ? Math.round((verifiedWorkers / registeredWorkers.length) * 100) : 0;
+    const barangayDemand = BARANGAYS.map((barangay) => ({
+      barangay,
+      jobs: postedJobs.filter((job) => job.barangay === barangay).length,
+      workers: registeredWorkers.filter((worker) => worker.barangay === barangay).length,
+    })).filter((item) => item.jobs || item.workers).sort((a, b) => b.jobs - a.jobs).slice(0, 6);
+    const jobCategories = SKILLS.map((skill) => {
+      const categoryJobs = postedJobs.filter((job) => job.serviceType === skill);
+      const averageRate = categoryJobs.length ? categoryJobs.reduce((sum, job) => sum + Number(job.offeredRate || 0), 0) / categoryJobs.length : 0;
+      return { skill, count: categoryJobs.length, averageRate };
+    }).filter((item) => item.count).sort((a, b) => b.count - a.count).slice(0, 5);
+    const activeJobs = postedJobs.filter((job) => job.status === "Open").length;
+    const monthlyJobRequests = buildMonthlyJobRequests(postedJobs);
+    const jobStatusAnalytics = [
+      { name: "Completed", value: completedServices },
+      { name: "Cancelled", value: cancelledRequests },
+    ];
+    const serviceAnalytics = buildServiceAnalytics(postedJobs);
+    const barangayJobAnalytics = buildBarangayAnalytics(postedJobs, (job) => job.barangay, "jobs");
+    const barangayWorkerAnalytics = buildBarangayAnalytics(registeredWorkers, (worker) => worker.barangay, "workers");
+    const workerRatingValues = registeredWorkers.map(getWorkerRatingValue).filter((rating) => rating != null);
+    const averageWorkerRating = workerRatingValues.length ? (workerRatingValues.reduce((sum, rating) => sum + rating, 0) / workerRatingValues.length).toFixed(2) : "No ratings yet";
+    const ratingDistribution = buildRatingDistribution(registeredWorkers);
+    const rejectedWorkerVerifications = registeredWorkers.filter((worker) => worker.verification === "Rejected").length;
+    const verificationAnalytics = [
+      { name: "Verified", value: verifiedWorkers },
+      { name: "Pending", value: pendingVerificationRequests.length },
+      { name: "Rejected", value: Math.max(rejectedVerificationRequests.length, rejectedWorkerVerifications) },
+    ];
+    const recentAuditLogs = [
+      ...verificationRequests.slice(0, 6).map((request) => ({
+        id: `verification-${request.id}`,
+        timestamp: request.reviewedAt || request.submittedAt || "Recently",
+        admin: request.reviewedBy || currentUser?.displayName || "Super Admin",
+        action: `${request.status} verification`,
+        target: request.workerName || request.workerUsername,
+        status: request.status,
+      })),
+      { id: "system-login", timestamp: "Current session", admin: currentUser?.displayName || "Super Admin", action: "superadmin_login", target: "GawaGo frontend", status: "Success" },
+    ];
+    const tabs = [
+      { id: "verification", label: "Verification Queue" },
+      { id: "analytics", label: "Analytics" },
+      { id: "adminmgmt", label: "Admin Management" },
+      { id: "audit", label: "Audit Logs" },
+    ];
+    const renderStatusBadge = (status) => {
+      const badgeClass = status === "Approved" || status === "Success" ? "text-bg-success" : status === "Rejected" ? "text-bg-danger" : "text-bg-warning";
+      return <span className={`badge ${badgeClass}`}>{status}</span>;
+    };
+    return (
+      <div className="app-shell">
+        <header className="gawago-header sticky-top">
+          <nav className="container navbar navbar-expand-lg py-3 gawago-header-inner">
+            <span className="navbar-brand fw-bold text-decoration-none p-0 gawago-brand">GawaGo</span>
+          </nav>
+        </header>
+        <main>
+          <section className="worker-dashboard superadmin-dashboard">
+            <div className="worker-layout">
+              <aside className="worker-sidebar">
+                <div className="worker-sidebar-head">
+                  <div className="worker-logo">GG</div>
+                  <p className="worker-brand mb-0">SuperAdmin Panel</p>
+                </div>
+                <nav className="worker-nav">
+                  {tabs.map((tab) => (
+                    <button key={tab.id} type="button" className={`worker-nav-item ${superAdminSection === tab.id ? "active" : ""}`} onClick={() => setSuperAdminSection(tab.id)}>
+                      {tab.label}
+                    </button>
+                  ))}
+                </nav>
+              </aside>
+              <div className="worker-content">
+                <div className="worker-topbar">
+                  <div>
+                    <h1 className="h4 mb-1">SuperAdmin Dashboard</h1>
+                    <p className="small text-muted mb-0">Full system control, analytics monitoring, and worker verification.</p>
+                  </div>
+                  <div className="worker-user-meta d-flex align-items-center gap-2">
+                    <span className="small fw-semibold">{currentUser?.displayName || "Super Admin"}</span>
+                    <button className="btn btn-outline-secondary btn-sm" type="button" onClick={handleLogout}>Log Out</button>
+                  </div>
+                </div>
+
+                <div className="row g-3 mt-1">
+                  <div className="col-md-6 col-xl">
+                    <div className="metric-card superadmin-stat-danger">
+                      <p className="metric-label mb-1">Pending Verifications</p>
+                      <p className="metric-value mb-0">{pendingVerificationRequests.length}</p>
+                      <p className="small text-muted mb-0">Queue needing admin review</p>
+                    </div>
+                  </div>
+                  <div className="col-md-6 col-xl">
+                    <div className="metric-card superadmin-stat-success">
+                      <p className="metric-label mb-1">Verified Workers</p>
+                      <p className="metric-value mb-0">{verifiedWorkers}</p>
+                      <p className="small text-muted mb-0">{verifiedPercent}% of worker accounts</p>
+                    </div>
+                  </div>
+                  <div className="col-md-6 col-xl">
+                    <div className="metric-card superadmin-stat-danger">
+                      <p className="metric-label mb-1">Rejected Workers</p>
+                      <p className="metric-value mb-0">{Math.max(rejectedVerificationRequests.length, rejectedWorkerVerifications)}</p>
+                      <p className="small text-muted mb-0">Verification requests rejected</p>
+                    </div>
+                  </div>
+                  <div className="col-md-6 col-xl">
+                    <div className="metric-card superadmin-stat-warning">
+                      <p className="metric-label mb-1">Total Users</p>
+                      <p className="metric-value mb-0">{totalUsers}</p>
+                      <p className="small text-muted mb-0">{registeredHouseholds.length} households, {registeredWorkers.length} workers</p>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="superadmin-tabs mt-3">
+                  {tabs.map((tab) => (
+                    <button key={tab.id} type="button" className={`superadmin-tab ${superAdminSection === tab.id ? "active" : ""}`} onClick={() => setSuperAdminSection(tab.id)}>
+                      {tab.label}
+                    </button>
+                  ))}
+                </div>
+
+                {superAdminSection === "verification" && (
+                  <div className="profile-card mt-3">
+                    <div className="profile-card-head d-flex justify-content-between align-items-center gap-3 flex-wrap">
+                      <span>Worker Verification Queue</span>
+                      <span className="small text-muted">{verificationRequests.length} total requests</span>
+                    </div>
+                    {selectedVerificationRequest && (
+                      <div className="verification-detail-panel p-3 border-bottom">
+                        <div className="d-flex justify-content-between align-items-start gap-3 flex-wrap">
+                          <div>
+                            <h3 className="h6 mb-1">{selectedVerificationRequest.workerName}</h3>
+                            <p className="small text-muted mb-0">@{selectedVerificationRequest.workerUsername}</p>
+                          </div>
+                          {renderStatusBadge(selectedVerificationRequest.status)}
+                        </div>
+                        <div className="row g-3 mt-1">
+                          <div className="col-lg-4">
+                            <div className="verification-note h-100">
+                              <p className="small text-muted mb-1">Submitted</p>
+                              <p className="mb-2 fw-semibold">{selectedVerificationRequest.submittedAt || "Recently"}</p>
+                              <p className="small text-muted mb-1">Worker Notes</p>
+                              <p className="mb-2">{selectedVerificationRequest.notes || "No notes submitted."}</p>
+                              <p className="small text-muted mb-1">Admin Note</p>
+                              <p className="mb-0">{selectedVerificationRequest.reviewNote || "No admin note yet."}</p>
+                            </div>
+                          </div>
+                          {[
+                            { label: "Primary ID", name: selectedVerificationRequest.primaryIdName, preview: selectedVerificationRequest.primaryIdPreview },
+                            { label: "Supporting Document", name: selectedVerificationRequest.secondaryDocName, preview: selectedVerificationRequest.secondaryDocPreview },
+                          ].map((documentItem) => (
+                            <div className="col-lg-4" key={documentItem.label}>
+                              <div className="verification-document-card h-100">
+                                <p className="small text-muted mb-1">{documentItem.label}</p>
+                                <p className="fw-semibold mb-2">{documentItem.name || "No file name"}</p>
+                                {documentItem.preview ? (
+                                  isImagePreviewUrl(documentItem.preview) ? (
+                                    <button type="button" className="verification-document-preview" onClick={() => openFilePreview(documentItem.preview)}>
+                                      <img src={documentItem.preview} alt={`${documentItem.label} preview`} />
+                                    </button>
+                                  ) : (
+                                    <button type="button" className="btn btn-outline-primary btn-sm" onClick={() => openFilePreview(documentItem.preview)}>
+                                      Open Document
+                                    </button>
+                                  )
+                                ) : (
+                                  <p className="small text-muted mb-0">Preview file is not stored for this backend record.</p>
+                                )}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                        {!["Approved", "Rejected"].includes(selectedVerificationRequest.status) && (
+                          <div className="d-flex gap-2 mt-3 flex-wrap">
+                            <button className="btn btn-success btn-sm" type="button" onClick={() => handleAdminApproveVerification(selectedVerificationRequest.id)}>Approve</button>
+                            <button className="btn btn-outline-danger btn-sm" type="button" onClick={() => handleAdminRejectVerification(selectedVerificationRequest.id)}>Reject</button>
+                          </div>
+                        )}
+                      </div>
+                    )}
+                    <div className="table-responsive">
+                      <table className="table align-middle mb-0">
+                        <thead>
+                          <tr>
+                            <th>Worker</th>
+                            <th>Submitted</th>
+                            <th>Documents</th>
+                            <th>Status</th>
+                            <th>Action</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {verificationRequests.length > 0 ? verificationRequests.map((request) => (
+                            <tr key={request.id}>
+                              <td>
+                                <strong>{request.workerName}</strong>
+                                <br />
+                                <span className="small text-muted">@{request.workerUsername}</span>
+                              </td>
+                              <td>{request.submittedAt || "Recently"}</td>
+                              <td>
+                                <button className="badge text-bg-light border text-dark me-1 verification-doc-chip" type="button" onClick={() => {
+                                  openVerificationRequest(request.id);
+                                  if (request.primaryIdPreview) openFilePreview(request.primaryIdPreview);
+                                }}>{request.primaryIdName || "Primary ID"}</button>
+                                <button className="badge text-bg-light border text-dark verification-doc-chip" type="button" onClick={() => {
+                                  openVerificationRequest(request.id);
+                                  if (request.secondaryDocPreview) openFilePreview(request.secondaryDocPreview);
+                                }}>{request.secondaryDocName || "Supporting Doc"}</button>
+                              </td>
+                              <td>{renderStatusBadge(request.status)}</td>
+                              <td>
+                                <div className="d-flex gap-2 flex-wrap">
+                                  <button className="btn btn-outline-secondary btn-sm" type="button" onClick={() => openVerificationRequest(request.id)}>Review</button>
+                                  {!["Approved", "Rejected"].includes(request.status) && (
+                                    <>
+                                      <button className="btn btn-success btn-sm" type="button" onClick={() => handleAdminApproveVerification(request.id)}>Approve</button>
+                                      <button className="btn btn-outline-danger btn-sm" type="button" onClick={() => handleAdminRejectVerification(request.id)}>Reject</button>
+                                    </>
+                                  )}
+                                </div>
+                              </td>
+                            </tr>
+                          )) : (
+                            <tr>
+                              <td colSpan="5" className="text-center text-muted py-4">No verification requests yet.</td>
+                            </tr>
+                          )}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                )}
+
+                {superAdminSection === "analytics" && (
+                  <>
+                    <div className="superadmin-analytics mt-3">
+                      <div className="analytics-section-head">
+                        <div>
+                          <h2 className="h5 mb-1">Data Analytics</h2>
+                          <p className="small text-muted mb-0">System-wide employment, service, barangay, rating, and verification metrics.</p>
+                        </div>
+                        <span className="badge text-bg-light border text-dark">Backend-ready</span>
+                      </div>
+
+                      <div className="profile-card analytics-card">
+                        <div className="profile-card-head d-flex justify-content-between align-items-center gap-3 flex-wrap">
+                          <span>Demo Backend Accounts</span>
+                          <span className="small text-muted">Seeded in Django database</span>
+                        </div>
+                        <div className="table-responsive">
+                          <table className="table align-middle mb-0 analytics-table">
+                            <thead><tr><th>Type</th><th>Name</th><th>Username</th><th>Password</th><th>Barangay</th><th>Status</th></tr></thead>
+                            <tbody>
+                              {[...registeredHouseholds.filter((account) => DEMO_ACCOUNT_PASSWORDS[account.username]).map((account) => ({ ...account, type: "Household", statusLabel: "Active" })), ...registeredWorkers.filter((account) => DEMO_ACCOUNT_PASSWORDS[account.username]).map((account) => ({ ...account, type: "Worker", statusLabel: account.verification || "Pending" }))].map((account) => (
+                                <tr key={`${account.type}-${account.username}`}>
+                                  <td><span className={`badge ${account.type === "Worker" ? "text-bg-primary" : "text-bg-info"}`}>{account.type}</span></td>
+                                  <td>{getDisplayName(account.firstName, account.lastName, account.username)}</td>
+                                  <td><strong>{account.username}</strong></td>
+                                  <td><code>{DEMO_ACCOUNT_PASSWORDS[account.username]}</code></td>
+                                  <td>{account.barangay || "Not set"}</td>
+                                  <td>{account.statusLabel}</td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        </div>
+                      </div>
+
+                      <div className="row g-3 mt-1">
+                        <div className="col-md-6 col-xl-2"><div className="metric-card analytics-summary-card"><p className="metric-label mb-1">Total Users</p><p className="metric-value mb-0">{totalUsers}</p></div></div>
+                        <div className="col-md-6 col-xl-2"><div className="metric-card analytics-summary-card"><p className="metric-label mb-1">Total Workers</p><p className="metric-value mb-0">{registeredWorkers.length}</p></div></div>
+                        <div className="col-md-6 col-xl-2"><div className="metric-card analytics-summary-card"><p className="metric-label mb-1">Households</p><p className="metric-value mb-0">{registeredHouseholds.length}</p></div></div>
+                        <div className="col-md-6 col-xl-2"><div className="metric-card analytics-summary-card"><p className="metric-label mb-1">Active Jobs</p><p className="metric-value mb-0">{activeJobs}</p></div></div>
+                        <div className="col-md-6 col-xl-2"><div className="metric-card analytics-summary-card"><p className="metric-label mb-1">Completed Jobs</p><p className="metric-value mb-0">{completedServices}</p></div></div>
+                        <div className="col-md-6 col-xl-2"><div className="metric-card analytics-summary-card"><p className="metric-label mb-1">Pending Verifications</p><p className="metric-value mb-0">{pendingVerificationRequests.length}</p></div></div>
+                      </div>
+
+                      <div className="row g-3 mt-1">
+                        <div className="col-xl-8">
+                          <div className="profile-card analytics-card h-100">
+                            <div className="profile-card-head">Monthly Job Requests</div>
+                            <div className="analytics-chart-wrap">
+                              <ResponsiveContainer width="100%" height={280}>
+                                <LineChart data={monthlyJobRequests} margin={{ top: 16, right: 18, left: 0, bottom: 4 }}>
+                                  <CartesianGrid strokeDasharray="3 3" stroke="#d9e2ff" />
+                                  <XAxis dataKey="month" tick={{ fill: "#5f6b7b", fontSize: 12 }} />
+                                  <YAxis allowDecimals={false} tick={{ fill: "#5f6b7b", fontSize: 12 }} />
+                                  <Tooltip />
+                                  <Line type="monotone" dataKey="requests" stroke="#667eea" strokeWidth={3} dot={{ r: 4 }} activeDot={{ r: 6 }} />
+                                </LineChart>
+                              </ResponsiveContainer>
+                            </div>
+                          </div>
+                        </div>
+                        <div className="col-xl-4">
+                          <div className="profile-card analytics-card h-100">
+                            <div className="profile-card-head">Completed vs Cancelled</div>
+                            <div className="analytics-chart-wrap">
+                              <ResponsiveContainer width="100%" height={280}>
+                                <PieChart>
+                                  <Pie data={jobStatusAnalytics} dataKey="value" nameKey="name" innerRadius={62} outerRadius={92} paddingAngle={4}>
+                                    {jobStatusAnalytics.map((entry, index) => <Cell key={entry.name} fill={ANALYTICS_CHART_COLORS[index + 1]} />)}
+                                  </Pie>
+                                  <Tooltip />
+                                  <Legend />
+                                </PieChart>
+                              </ResponsiveContainer>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="row g-3 mt-1">
+                        <div className="col-xl-7">
+                          <div className="profile-card analytics-card h-100">
+                            <div className="profile-card-head">Most Requested Services</div>
+                            <div className="analytics-chart-wrap">
+                              <ResponsiveContainer width="100%" height={300}>
+                                <BarChart data={serviceAnalytics} margin={{ top: 16, right: 18, left: 0, bottom: 4 }}>
+                                  <CartesianGrid strokeDasharray="3 3" stroke="#d9e2ff" />
+                                  <XAxis dataKey="service" tick={{ fill: "#5f6b7b", fontSize: 12 }} />
+                                  <YAxis allowDecimals={false} tick={{ fill: "#5f6b7b", fontSize: 12 }} />
+                                  <Tooltip />
+                                  <Bar dataKey="requests" radius={[8, 8, 0, 0]}>
+                                    {serviceAnalytics.map((entry, index) => <Cell key={entry.service} fill={ANALYTICS_CHART_COLORS[index % ANALYTICS_CHART_COLORS.length]} />)}
+                                  </Bar>
+                                </BarChart>
+                              </ResponsiveContainer>
+                            </div>
+                          </div>
+                        </div>
+                        <div className="col-xl-5">
+                          <div className="profile-card analytics-card h-100">
+                            <div className="profile-card-head">Verification Analytics</div>
+                            <div className="analytics-chart-wrap">
+                              <ResponsiveContainer width="100%" height={300}>
+                                <BarChart data={verificationAnalytics} layout="vertical" margin={{ top: 16, right: 24, left: 12, bottom: 4 }}>
+                                  <CartesianGrid strokeDasharray="3 3" stroke="#d9e2ff" />
+                                  <XAxis type="number" allowDecimals={false} tick={{ fill: "#5f6b7b", fontSize: 12 }} />
+                                  <YAxis type="category" dataKey="name" tick={{ fill: "#5f6b7b", fontSize: 12 }} width={72} />
+                                  <Tooltip />
+                                  <Bar dataKey="value" radius={[0, 8, 8, 0]}>
+                                    {verificationAnalytics.map((entry, index) => <Cell key={entry.name} fill={ANALYTICS_CHART_COLORS[index]} />)}
+                                  </Bar>
+                                </BarChart>
+                              </ResponsiveContainer>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="row g-3 mt-1">
+                        <div className="col-xl-6">
+                          <div className="profile-card analytics-card h-100">
+                            <div className="profile-card-head">Barangays with High Job Demand</div>
+                            <div className="table-responsive">
+                              <table className="table align-middle mb-0 analytics-table">
+                                <thead><tr><th>Barangay</th><th>Job Requests</th><th>Demand</th></tr></thead>
+                                <tbody>
+                                  {barangayJobAnalytics.length > 0 ? barangayJobAnalytics.map((item) => (
+                                    <tr key={item.barangay}><td>{item.barangay}</td><td>{item.jobs}</td><td><div className="analytics-meter"><span style={{ width: `${Math.max(8, (item.jobs / Math.max(...barangayJobAnalytics.map((row) => row.jobs), 1)) * 100)}%` }} /></div></td></tr>
+                                  )) : <tr><td colSpan="3" className="text-center text-muted py-4">No barangay job data yet.</td></tr>}
+                                </tbody>
+                              </table>
+                            </div>
+                          </div>
+                        </div>
+                        <div className="col-xl-6">
+                          <div className="profile-card analytics-card h-100">
+                            <div className="profile-card-head">Barangays with Worker Availability</div>
+                            <div className="table-responsive">
+                              <table className="table align-middle mb-0 analytics-table">
+                                <thead><tr><th>Barangay</th><th>Workers</th><th>Availability</th></tr></thead>
+                                <tbody>
+                                  {barangayWorkerAnalytics.length > 0 ? barangayWorkerAnalytics.map((item) => (
+                                    <tr key={item.barangay}><td>{item.barangay}</td><td>{item.workers}</td><td><div className="analytics-meter availability"><span style={{ width: `${Math.max(8, (item.workers / Math.max(...barangayWorkerAnalytics.map((row) => row.workers), 1)) * 100)}%` }} /></div></td></tr>
+                                  )) : <tr><td colSpan="3" className="text-center text-muted py-4">No barangay worker data yet.</td></tr>}
+                                </tbody>
+                              </table>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="row g-3 mt-1">
+                        <div className="col-xl-4">
+                          <div className="profile-card analytics-card h-100">
+                            <div className="profile-card-head">Average Worker Rating</div>
+                            <div className="analytics-rating-summary">
+                              <p className="analytics-rating-value mb-1">{averageWorkerRating}</p>
+                              <p className="small text-muted mb-0">{workerRatingValues.length} rated worker profile(s)</p>
+                            </div>
+                          </div>
+                        </div>
+                        <div className="col-xl-4">
+                          <div className="profile-card analytics-card h-100">
+                            <div className="profile-card-head">Rating Distribution</div>
+                            <div className="analytics-chart-wrap compact">
+                              <ResponsiveContainer width="100%" height={230}>
+                                <BarChart data={ratingDistribution} margin={{ top: 16, right: 18, left: 0, bottom: 4 }}>
+                                  <CartesianGrid strokeDasharray="3 3" stroke="#d9e2ff" />
+                                  <XAxis dataKey="stars" tick={{ fill: "#5f6b7b", fontSize: 12 }} />
+                                  <YAxis allowDecimals={false} tick={{ fill: "#5f6b7b", fontSize: 12 }} />
+                                  <Tooltip />
+                                  <Bar dataKey="count" fill="#ffc107" radius={[8, 8, 0, 0]} />
+                                </BarChart>
+                              </ResponsiveContainer>
+                            </div>
+                          </div>
+                        </div>
+                        <div className="col-xl-4">
+                          <div className="profile-card analytics-card h-100">
+                            <div className="profile-card-head">Service Rate Transparency</div>
+                            <div className="table-responsive">
+                              <table className="table align-middle mb-0 analytics-table">
+                                <thead><tr><th>Category</th><th>Posts</th><th>Average Rate</th></tr></thead>
+                                <tbody>
+                                  {jobCategories.length > 0 ? jobCategories.map((item) => (
+                                    <tr key={item.skill}><td>{item.skill}</td><td>{item.count}</td><td>{formatCurrency(item.averageRate)}</td></tr>
+                                  )) : <tr><td colSpan="3" className="text-center text-muted py-4">No rate data yet.</td></tr>}
+                                </tbody>
+                              </table>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </>
+                )}
+
+                {superAdminSection === "adminmgmt" && (
+                  <div className="profile-card mt-3">
+                    <div className="profile-card-head d-flex justify-content-between align-items-center gap-3 flex-wrap">
+                      <span>Registered Admins</span>
+                      <button className="btn btn-primary btn-sm" type="button">Add Admin</button>
+                    </div>
+                    <div className="table-responsive">
+                      <table className="table align-middle mb-0">
+                        <thead><tr><th>Admin Name</th><th>Username</th><th>Role</th><th>Status</th><th>Action</th></tr></thead>
+                        <tbody>
+                          <tr><td><strong>Super Admin</strong></td><td>superadmin</td><td>Full System Control</td><td><span className="badge text-bg-dark">Owner</span></td><td><button className="btn btn-outline-secondary btn-sm" type="button">Manage</button></td></tr>
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                )}
+
+                {superAdminSection === "audit" && (
+                  <div className="profile-card mt-3">
+                    <div className="profile-card-head">Audit Logs</div>
+                    <div className="table-responsive">
+                      <table className="table align-middle mb-0">
+                        <thead><tr><th>Timestamp</th><th>Admin</th><th>Action</th><th>Target</th><th>Status</th></tr></thead>
+                        <tbody>
+                          {recentAuditLogs.map((log) => (
+                            <tr key={log.id}><td>{log.timestamp}</td><td>{log.admin}</td><td>{log.action}</td><td>{log.target}</td><td>{renderStatusBadge(log.status)}</td></tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          </section>
+        </main>
+      </div>
+    );
+  }
+  function renderWorkerJobDetailView() {
+    const job = currentWorkerJobDetail;
+    const household = currentWorkerJobHousehold;
+    const householdName = getDisplayName(household?.firstName, household?.lastName, job?.householdName || job?.householdUsername || "Household");
+    const householdPhoto = getHouseholdPhoto(household);
+    const alreadyApplied = job && currentWorker ? (job.applications || []).some((application) => String(application.workerId) === String(currentWorker.id) || application.workerUsername === currentWorker.username) : false;
+    const jobLatitude = job?.latitude ?? household?.latitude ?? null;
+    const jobLongitude = job?.longitude ?? household?.longitude ?? null;
+    const workerLatitude = currentWorker?.latitude ?? null;
+    const workerLongitude = currentWorker?.longitude ?? null;
+    const jobDistanceKm = haversineDistanceKm(workerLatitude, workerLongitude, jobLatitude, jobLongitude);
+    return (
+      <div className="app-shell">
+        <header className="gawago-header sticky-top">
+          <nav className="container navbar navbar-expand-lg py-3 gawago-header-inner">
+            <span className="navbar-brand fw-bold text-decoration-none p-0 gawago-brand">GawaGo</span>
+          </nav>
+        </header>
+        <main>
+          <section className="worker-dashboard">
+            <div className="worker-layout">
+              <aside className="worker-sidebar">
+                <div className="worker-sidebar-head">
+                  <div className="worker-logo">GG</div>
+                  <p className="worker-brand mb-0">GawaGo Community Platform</p>
+                </div>
+                <nav className="worker-nav">
+                  <button className="worker-nav-item" onClick={openWorkerDashboard}>Dashboard</button>
+                  <button className="worker-nav-item active" onClick={openWorkerFindJobs}>Find Jobs</button>
+                  <button className="worker-nav-item" onClick={openWorkerProfile}>My Profile</button>
+                  <button className="worker-nav-item" onClick={openWorkerApplications}>
+                    My Applications
+                    {workerApplicationUnreadCount > 0 && <span className="nav-count-badge">{workerApplicationUnreadCount}</span>}
+                  </button>
+                  <button className="worker-nav-item" onClick={openWorkerGetVerified}>Get Verified</button>
+                  <button className="worker-nav-item" onClick={openWorkerNotifications}>Notifications</button>
+                </nav>
+              </aside>
+              <div className="worker-content">
+                <div className="worker-topbar">
+                  <h1 className="h4 mb-0">Job Details</h1>
+                  <div className="worker-user-meta d-flex align-items-center gap-2">
+                    {workerMiniPhoto ? (
+                      <img src={workerMiniPhoto} alt="Worker profile" className="worker-mini-avatar" />
+                    ) : (
+                      <span className="worker-mini-avatar worker-mini-fallback">{(currentUser?.displayName || "W").slice(0, 1).toUpperCase()}</span>
+                    )}
+                    <span className="badge text-bg-primary">Worker</span>
+                    <button className="btn btn-outline-secondary btn-sm" type="button" onClick={openWorkerFindJobs}>Back</button>
+                    <button className="btn btn-outline-secondary btn-sm" type="button" onClick={handleLogout}>Log Out</button>
+                  </div>
+                </div>
+                {!job ? (
+                  <div className="profile-card mt-3">
+                    <div className="profile-card-head">Job not found</div>
+                    <div className="p-3">
+                      <p className="mb-3 text-muted">This job is no longer available or could not be loaded.</p>
+                      <button className="btn btn-primary" type="button" onClick={openWorkerFindJobs}>Back to Find Jobs</button>
+                    </div>
+                  </div>
+                ) : (
+                  <>
+                    <div className="profile-card mt-3">
+                      <div className="profile-card-head d-flex justify-content-between align-items-center gap-3 flex-wrap">
+                        <span>{job.jobTitle || job.serviceType}</span>
+                        <span className={`badge ${getJobStatusBadgeClass(job.status)}`}>{job.status || "Open"}</span>
+                      </div>
+                      <div className="p-3">
+                        <div className="row g-3">
+                          <div className="col-lg-8">
+                            <div className="d-grid gap-2">
+                              <p className="mb-0 d-flex justify-content-between gap-3"><span className="text-muted">Service</span><strong>{job.serviceType}</strong></p>
+                              <p className="mb-0 d-flex justify-content-between gap-3"><span className="text-muted">Schedule</span><strong>{job.scheduleType || "Not set"}</strong></p>
+                              <p className="mb-0 d-flex justify-content-between gap-3"><span className="text-muted">Date</span><strong>{job.preferredDate || "Not set"}</strong></p>
+                              <p className="mb-0 d-flex justify-content-between gap-3"><span className="text-muted">Time</span><strong>{job.preferredTime || "Not set"}</strong></p>
+                              <p className="mb-0 d-flex justify-content-between gap-3"><span className="text-muted">Needed</span><strong>{getHiringProgressLabel(job)} hired</strong></p>
+                              <p className="mb-0 d-flex justify-content-between gap-3"><span className="text-muted">Rate</span><strong>{formatRate(job.offeredRate, job.rateType)}</strong></p>
+                              <p className="mb-0 d-flex justify-content-between gap-3"><span className="text-muted">Location</span><strong className="text-end">{formatLocation(household?.barangay || job.barangay, household?.streetAddress || job.streetAddress)}</strong></p>
+                            </div>
+                          </div>
+                          <div className="col-lg-4">
+                            <div className="household-profile-preview h-100" data-household-profile-preview="true">
+                              <p className="small text-muted mb-2">Household Profile</p>
+                              <div className="d-flex align-items-center gap-3">
+                                {householdPhoto ? (
+                                  <img src={householdPhoto} alt={`${householdName} profile`} className="household-profile-photo" />
+                                ) : (
+                                  <div className="household-profile-fallback">{(householdName || "H").slice(0, 1).toUpperCase()}</div>
+                                )}
+                                <div className="flex-grow-1">
+                                  <p className="mb-1 fw-semibold">{householdName}</p>
+                                  <p className="mb-1 small text-muted">{formatLocation(household?.barangay || job.barangay, household?.streetAddress || job.streetAddress)}</p>
+                                  <p className="mb-0 small text-muted">{[household?.phone ? `+63${household.phone}` : "", household?.email || ""].filter(Boolean).join(" | ") || "Contact details not provided"}</p>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                        <div className="mt-3">
+                          <p className="small text-muted fw-semibold mb-1">Description</p>
+                          <p className="mb-0">{job.description || "No description provided."}</p>
+                        </div>
+                        <div className="d-flex gap-2 flex-wrap mt-3">
+                          <button className="btn btn-primary" type="button" disabled={alreadyApplied} onClick={() => handleApplyToJob(job.id)}>
+                            {alreadyApplied ? "Already Applied" : "Apply Now"}
+                          </button>
+                          <button className="btn btn-outline-secondary" type="button" onClick={openWorkerFindJobs}>Back to Find Jobs</button>
+                        </div>
+                      </div>
+                    </div>
+                    <div className="profile-card mt-3" data-worker-job-distance-map="true">
+                      <div className="profile-card-head">Distance & Location</div>
+                      <div className="p-3">
+                        <LocationDistanceMap
+                          userLatitude={workerLatitude}
+                          userLongitude={workerLongitude}
+                          targetLatitude={jobLatitude}
+                          targetLongitude={jobLongitude}
+                          userLocation={formatLocation(currentWorker?.barangay, currentWorker?.streetAddress)}
+                          targetLocation={formatLocation(household?.barangay || job.barangay, household?.streetAddress || job.streetAddress)}
+                          distanceKm={jobDistanceKm}
+                          formatDistanceFn={formatDistance}
+                        />
+                      </div>
+                    </div>
+                  </>
+                )}
+              </div>
+            </div>
+          </section>
+        </main>
+      </div>
+    );
+  }
+  if (view === "worker-job-detail") {
+    return renderWorkerJobDetailView();
+  }
+  if (view === "superadmin-dashboard") {
+    return renderSuperAdminDashboard();
   }
   if (view === "forgot-password") {
     return /* @__PURE__ */ React.createElement("div", { className: "app-shell" }, "       ", /* @__PURE__ */ React.createElement("section", { className: "login-section py-5" }, "         ", /* @__PURE__ */ React.createElement("div", { className: "container login-page-wrap" }, "           ", /* @__PURE__ */ React.createElement("div", { className: "login-shell shadow-sm" }, "             ", /* @__PURE__ */ React.createElement("div", { className: "login-topbar d-flex align-items-center px-3" }, "               ", /* @__PURE__ */ React.createElement("span", { className: "badge rounded-pill text-bg-light text-primary me-2" }, "GG"), "               ", /* @__PURE__ */ React.createElement("span", { className: "small fw-semibold" }, "Password Reset"), "             "), "             ", /* @__PURE__ */ React.createElement("div", { className: "login-card mx-auto" }, "               ", /* @__PURE__ */ React.createElement("div", { className: "login-card-head text-center" }, "                 ", /* @__PURE__ */ React.createElement("div", { className: "login-avatar" }, "GG"), "                 ", /* @__PURE__ */ React.createElement("h2", { className: "h6 fw-bold mb-1" }, "Reset your password"), "                 ", /* @__PURE__ */ React.createElement("p", { className: "small text-white-50 mb-0" }, "We will send a reset code to your Gmail address."), "               "), "               ", /* @__PURE__ */ React.createElement("div", { className: "p-3 p-md-4" }, "                 ", forgotPasswordNotice ? /* @__PURE__ */ React.createElement("div", { className: "alert alert-info py-2" }, forgotPasswordNotice) : null, "                 ", forgotPasswordError ? /* @__PURE__ */ React.createElement("div", { className: "alert alert-danger py-2" }, forgotPasswordError) : null, "                 ", forgotPasswordStep === "email" && /* @__PURE__ */ React.createElement("form", { onSubmit: handleForgotPasswordEmailSubmit }, "                   ", /* @__PURE__ */ React.createElement("div", { className: "mb-3" }, "                     ", /* @__PURE__ */ React.createElement("label", { className: "form-label fw-semibold", htmlFor: "reset-email" }, "Email address"), "                     ", /* @__PURE__ */ React.createElement("input", { id: "reset-email", name: "email", type: "email", className: "form-control", value: forgotPasswordForm.email, onChange: handleForgotPasswordChange, placeholder: "Enter your Gmail address" }), "                   "), "                   ", /* @__PURE__ */ React.createElement("button", { className: "btn btn-primary w-100", type: "submit", disabled: forgotPasswordLoading }, forgotPasswordLoading ? "Sending..." : "Send OTP"), "                 "), "                 ", forgotPasswordStep === "verify" && /* @__PURE__ */ React.createElement("form", { onSubmit: handleVerifyResetToken }, "                   ", /* @__PURE__ */ React.createElement("div", { className: "mb-3" }, "                     ", /* @__PURE__ */ React.createElement("label", { className: "form-label fw-semibold", htmlFor: "reset-token" }, "OTP / Reset Code"), "                     ", /* @__PURE__ */ React.createElement("input", { id: "reset-token", name: "token", type: "text", className: "form-control", value: forgotPasswordForm.token, onChange: handleForgotPasswordChange, placeholder: "Enter the 6-digit code" }), "                   "), "                   ", /* @__PURE__ */ React.createElement("button", { className: "btn btn-primary w-100", type: "submit", disabled: forgotPasswordLoading }, forgotPasswordLoading ? "Verifying..." : "Verify Code"), "                 "), "                 ", forgotPasswordStep === "reset" && /* @__PURE__ */ React.createElement("form", { onSubmit: handleResetPassword }, "                   ", /* @__PURE__ */ React.createElement("div", { className: "mb-3" }, "                     ", /* @__PURE__ */ React.createElement("label", { className: "form-label fw-semibold", htmlFor: "new-password" }, "New Password"), "                     ", /* @__PURE__ */ React.createElement("input", { id: "new-password", name: "newPassword", type: "password", className: "form-control", value: forgotPasswordForm.newPassword, onChange: handleForgotPasswordChange }), "                   "), "                   ", /* @__PURE__ */ React.createElement("div", { className: "mb-3" }, "                     ", /* @__PURE__ */ React.createElement("label", { className: "form-label fw-semibold", htmlFor: "confirm-password" }, "Confirm Password"), "                     ", /* @__PURE__ */ React.createElement("input", { id: "confirm-password", name: "confirmPassword", type: "password", className: "form-control", value: forgotPasswordForm.confirmPassword, onChange: handleForgotPasswordChange }), "                   "), "                   ", /* @__PURE__ */ React.createElement("button", { className: "btn btn-primary w-100", type: "submit", disabled: forgotPasswordLoading }, forgotPasswordLoading ? "Resetting..." : "Reset Password"), "                 "), "                 ", forgotPasswordStep === "done" && /* @__PURE__ */ React.createElement("div", { className: "d-grid gap-2" }, "                   ", /* @__PURE__ */ React.createElement("button", { type: "button", className: "btn btn-success", onClick: openLogin }, "Back to Login"), "                   ", /* @__PURE__ */ React.createElement("button", { type: "button", className: "btn btn-outline-secondary", onClick: openForgotPassword }, "Send another code"), "                 "), "                 ", /* @__PURE__ */ React.createElement("div", { className: "mt-3 text-center" }, "                   ", /* @__PURE__ */ React.createElement("button", { type: "button", className: "btn btn-link btn-sm text-decoration-none p-0", onClick: openLogin }, "Return to login"), "                 "), "               "), "             "), "           "), "         "), "       "), "     ");

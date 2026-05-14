@@ -661,6 +661,91 @@ body {
   color: #0d1f48;
 }
 
+.superadmin-dashboard .worker-sidebar {
+  background:
+    radial-gradient(circle at top, rgba(255, 255, 255, 0.08), transparent 24%),
+    linear-gradient(180deg, #2d174f 0%, #4f2ea4 48%, #1f48dd 100%);
+}
+
+.superadmin-dashboard .worker-topbar {
+  background:
+    radial-gradient(circle at top left, rgba(118, 75, 162, 0.16), transparent 30%),
+    linear-gradient(180deg, #ffffff 0%, #f4f1ff 100%);
+}
+
+.superadmin-dashboard .metric-card {
+  border-left: 4px solid #667eea;
+}
+
+.superadmin-dashboard .metric-card.superadmin-stat-success {
+  border-left-color: #28a745;
+}
+
+.superadmin-dashboard .metric-card.superadmin-stat-warning {
+  border-left-color: #ffc107;
+}
+
+.superadmin-dashboard .metric-card.superadmin-stat-danger {
+  border-left-color: #dc3545;
+}
+
+.superadmin-dashboard .metric-card.superadmin-stat-info {
+  border-left-color: #17a2b8;
+}
+
+.superadmin-tabs {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  border-bottom: 1px solid rgba(173, 197, 255, 0.82);
+}
+
+.superadmin-tab {
+  appearance: none;
+  border: 0;
+  border-bottom: 3px solid transparent;
+  background: transparent;
+  color: #5f6b7b;
+  padding: 0.75rem 0.85rem;
+  font-weight: 800;
+  transition: color 0.18s ease, border-color 0.18s ease, background-color 0.18s ease;
+}
+
+.superadmin-tab.active,
+.superadmin-tab:hover {
+  color: #4f2ea4;
+  border-bottom-color: #667eea;
+  background: rgba(102, 126, 234, 0.08);
+}
+
+.superadmin-bar-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  align-items: center;
+  padding: 0.75rem 0.85rem;
+  border: 1px solid rgba(173, 197, 255, 0.82);
+  border-radius: 0.7rem;
+  background: rgba(255, 255, 255, 0.72);
+}
+
+.superadmin-alert {
+  padding: 0.8rem 0.95rem;
+  border-radius: 0.65rem;
+  border-left: 4px solid #667eea;
+  background: #f4f7ff;
+}
+
+.superadmin-alert.success {
+  border-left-color: #28a745;
+  background: #e7fff1;
+}
+
+.superadmin-alert.info {
+  border-left-color: #17a2b8;
+  background: #e8fbff;
+}
+
 .jobs-filter-panel {
   background: linear-gradient(180deg, #ffffff 0%, #f3f7ff 100%);
   border: 1px solid rgba(171, 192, 255, 0.78);
@@ -765,6 +850,154 @@ body {
 .household-job-map-canvas {
   width: 100%;
   min-height: 360px;
+}
+
+.household-job-map-canvas.manual-pin-active,
+.household-job-map-canvas.manual-pin-active .leaflet-container {
+  cursor: crosshair;
+}
+
+.household-job-map-canvas.manual-pin-active .leaflet-interactive {
+  cursor: grab;
+}
+
+.household-job-map-canvas.manual-pin-active .leaflet-marker-draggable {
+  cursor: grab;
+}
+
+.household-job-map-canvas.manual-pin-active .leaflet-marker-draggable:active {
+  cursor: grabbing;
+}
+
+.location-distance-map {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.location-distance-map-canvas {
+  min-height: 320px;
+  overflow: hidden;
+  border: 1px solid rgba(173, 197, 255, 0.82);
+  border-radius: 0.75rem;
+  background: #eef3ff;
+  position: relative;
+}
+
+.location-distance-map-placeholder {
+  min-height: 320px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #4f5672;
+  font-weight: 600;
+}
+
+.location-distance-marker {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: #dc3545;
+  color: #fff;
+  border: 3px solid #fff;
+  box-shadow: 0 0.25rem 0.8rem rgba(23, 31, 56, 0.25);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.72rem;
+  font-weight: 800;
+}
+
+.location-distance-fallback {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  gap: 1rem;
+  padding: 1.5rem;
+  background:
+    linear-gradient(90deg, rgba(13, 110, 253, 0.08) 1px, transparent 1px),
+    linear-gradient(180deg, rgba(13, 110, 253, 0.08) 1px, transparent 1px),
+    #eef3ff;
+  background-size: 42px 42px;
+  z-index: 1;
+}
+
+.location-distance-fallback-route {
+  width: min(620px, 82%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.65rem;
+}
+
+.location-distance-fallback-pin {
+  width: 2.65rem;
+  height: 2.65rem;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  color: #fff;
+  background: #dc3545;
+  border: 3px solid #fff;
+  box-shadow: 0 0.45rem 1rem rgba(23, 31, 56, 0.22);
+  font-weight: 800;
+}
+
+.location-distance-fallback-line {
+  height: 0.35rem;
+  flex: 1;
+  min-width: 8rem;
+  border-radius: 999px;
+  background: repeating-linear-gradient(90deg, #0d6efd 0 18px, transparent 18px 28px);
+}
+
+.location-distance-fallback-label {
+  display: grid;
+  gap: 0.15rem;
+  text-align: center;
+  color: #0b1f54;
+}
+
+.location-distance-fallback-label strong {
+  font-size: 1.05rem;
+  color: #0d6efd;
+}
+
+.location-distance-fallback-label small {
+  color: #4f5672;
+}
+
+.location-distance-summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.8rem 0.9rem;
+  border-radius: 0.75rem;
+  background: #f5f8ff;
+  border: 1px solid rgba(173, 197, 255, 0.72);
+}
+
+.location-distance-summary span {
+  color: #0d6efd;
+  font-weight: 800;
+}
+
+.location-distance-summary small {
+  color: #4f5672;
+  text-align: right;
+}
+
+.worker-job-distance-badge {
+  width: fit-content;
+  margin-top: 0.75rem;
+  padding: 0.45rem 0.7rem;
+  border: 1px solid rgba(13, 110, 253, 0.22);
+  border-radius: 999px;
+  background: #f5f8ff;
+  color: #0d6efd;
+  font-weight: 800;
+  font-size: 0.9rem;
 }
 
 .household-job-map-placeholder {
@@ -1285,8 +1518,19 @@ body {
   .household-job-map-frame,
   .household-job-map-frame iframe,
   .household-job-map-canvas,
-  .household-job-map-placeholder {
+  .household-job-map-placeholder,
+  .location-distance-map-canvas,
+  .location-distance-map-placeholder {
     min-height: 280px;
+  }
+
+  .location-distance-summary {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .location-distance-summary small {
+    text-align: left;
   }
 
   .worker-layout {

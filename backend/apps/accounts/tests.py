@@ -6,7 +6,50 @@ from django.test import TestCase
 from django.urls import reverse
 from django.utils import timezone
 
-from apps.accounts.models import PasswordResetRequest
+from apps.accounts.models import PasswordResetRequest, UserProfile
+
+
+class RegisterLoginFlowTests(TestCase):
+    def test_registered_worker_can_login_immediately(self):
+        register_response = self.client.post(
+            reverse("register"),
+            {
+                "username": "JuanWorker",
+                "email": "juan.worker@gmail.com",
+                "password": "worker-pass123",
+                "first_name": "Juan",
+                "last_name": "Worker",
+                "role": UserProfile.ROLE_WORKER,
+            },
+            content_type="application/json",
+        )
+        self.assertEqual(register_response.status_code, 201)
+
+        user = User.objects.get(username="JuanWorker")
+        self.assertTrue(user.is_active)
+        self.assertTrue(user.check_password("worker-pass123"))
+
+        login_response = self.client.post(
+            reverse("login"),
+            {"username": "JuanWorker", "password": "worker-pass123"},
+            content_type="application/json",
+        )
+        self.assertEqual(login_response.status_code, 200)
+        self.assertEqual(login_response.json()["username"], "JuanWorker")
+        self.assertEqual(login_response.json()["role"], UserProfile.ROLE_WORKER)
+
+    def test_login_accepts_username_case_used_differently_from_registration(self):
+        User.objects.create_user(username="MixedCaseUser", email="mixed@gmail.com", password="case-pass123")
+        UserProfile.objects.create(user=User.objects.get(username="MixedCaseUser"), role=UserProfile.ROLE_HOUSEHOLD)
+
+        response = self.client.post(
+            reverse("login"),
+            {"username": " mixedcaseuser ", "password": "case-pass123"},
+            content_type="application/json",
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()["username"], "MixedCaseUser")
 
 
 class PasswordResetFlowTests(TestCase):

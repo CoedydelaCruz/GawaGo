@@ -16,6 +16,9 @@ class UserProfile(models.Model):
 
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name="profile")
     role = models.CharField(max_length=20, choices=ROLE_CHOICES, default=ROLE_WORKER)
+    phone = models.CharField(max_length=30, blank=True, default="")
+    bio = models.TextField(blank=True, default="")
+    years_experience = models.PositiveIntegerField(default=0)
     skills = models.JSONField(default=list, blank=True)
     hourly_rate = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
     daily_rate = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)

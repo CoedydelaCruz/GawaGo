@@ -1,0 +1,130 @@
+.superadmin-analytics {
+  display: grid;
+  gap: 1rem;
+}
+
+.analytics-section-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+  padding: 1rem 1.1rem;
+  border: 1px solid rgba(173, 197, 255, 0.82);
+  border-radius: 0.8rem;
+  background: linear-gradient(180deg, #ffffff 0%, #f5f8ff 100%);
+  box-shadow: 0 12px 28px rgba(31, 72, 221, 0.07);
+}
+
+.analytics-summary-card {
+  min-height: 8.25rem;
+}
+
+.analytics-card {
+  overflow: hidden;
+}
+
+.analytics-chart-wrap {
+  width: 100%;
+  min-height: 17.5rem;
+  padding: 0.75rem 0.75rem 0.25rem;
+}
+
+.analytics-chart-wrap.compact {
+  min-height: 14.5rem;
+}
+
+.analytics-table th {
+  color: #5f6b7b;
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.analytics-meter {
+  width: 100%;
+  height: 0.58rem;
+  overflow: hidden;
+  border-radius: 999px;
+  background: #e8eeff;
+}
+
+.analytics-meter span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, #667eea 0%, #4f2ea4 100%);
+}
+
+.analytics-meter.availability span {
+  background: linear-gradient(90deg, #17a2b8 0%, #28a745 100%);
+}
+
+.analytics-rating-summary {
+  display: grid;
+  place-items: center;
+  min-height: 15rem;
+  padding: 1rem;
+  text-align: center;
+}
+
+.analytics-rating-value {
+  color: #0d1f48;
+  font-size: 3rem;
+  font-weight: 800;
+  line-height: 1;
+}
+
+.verification-detail-panel {
+  background: linear-gradient(180deg, #f8fbff 0%, #ffffff 100%);
+}
+
+.verification-doc-chip {
+  cursor: pointer;
+  font: inherit;
+}
+
+.verification-document-card {
+  padding: 0.9rem;
+  border: 1px solid rgba(173, 197, 255, 0.82);
+  border-radius: 0.75rem;
+  background: #ffffff;
+}
+
+.verification-document-preview {
+  display: block;
+  width: 100%;
+  min-height: 8rem;
+  max-height: 12rem;
+  overflow: hidden;
+  padding: 0;
+  border: 1px solid rgba(173, 197, 255, 0.82);
+  border-radius: 0.65rem;
+  background: #f5f8ff;
+}
+
+.verification-document-preview img {
+  width: 100%;
+  height: 100%;
+  max-height: 12rem;
+  object-fit: contain;
+}
+
+@media (max-width: 767.98px) {
+  .analytics-section-head {
+    align-items: flex-start;
+  }
+
+  .analytics-summary-card {
+    min-height: 7rem;
+  }
+
+  .analytics-chart-wrap {
+    min-height: 15rem;
+    padding-inline: 0.25rem;
+  }
+
+  .analytics-rating-summary {
+    min-height: 10rem;
+  }
+}

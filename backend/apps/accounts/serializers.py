@@ -21,6 +21,9 @@ class UserProfileSerializer(serializers.ModelSerializer):
             "full_name",
             "user_type",
             "role",
+            "phone",
+            "bio",
+            "years_experience",
             "skills",
             "hourly_rate",
             "daily_rate",
@@ -52,6 +55,9 @@ class RegisterSerializer(serializers.Serializer):
     first_name = serializers.CharField(max_length=150, required=False, allow_blank=True)
     last_name = serializers.CharField(max_length=150, required=False, allow_blank=True)
     role = serializers.ChoiceField(choices=UserProfile.ROLE_CHOICES, default=UserProfile.ROLE_WORKER)
+    phone = serializers.CharField(max_length=30, required=False, allow_blank=True)
+    bio = serializers.CharField(required=False, allow_blank=True)
+    years_experience = serializers.IntegerField(required=False, min_value=0)
     skills = serializers.ListField(child=serializers.CharField(), required=False)
     hourly_rate = serializers.DecimalField(max_digits=10, decimal_places=2, required=False, allow_null=True)
     daily_rate = serializers.DecimalField(max_digits=10, decimal_places=2, required=False, allow_null=True)
@@ -70,6 +76,9 @@ class ProfileUpdateSerializer(serializers.Serializer):
     last_name = serializers.CharField(required=False, allow_blank=True)
     email = serializers.EmailField(required=False)
     role = serializers.ChoiceField(choices=UserProfile.ROLE_CHOICES, required=False)
+    phone = serializers.CharField(max_length=30, required=False, allow_blank=True)
+    bio = serializers.CharField(required=False, allow_blank=True)
+    years_experience = serializers.IntegerField(required=False, min_value=0)
     skills = serializers.ListField(child=serializers.CharField(), required=False)
     hourly_rate = serializers.DecimalField(max_digits=10, decimal_places=2, required=False, allow_null=True)
     daily_rate = serializers.DecimalField(max_digits=10, decimal_places=2, required=False, allow_null=True)

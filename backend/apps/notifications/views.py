@@ -20,7 +20,9 @@ class NotificationListView(APIView):
             username = request.query_params.get("username") or request.query_params.get("recipient_username")
             if not username:
                 return Response({"detail": "username is required when not authenticated."}, status=status.HTTP_400_BAD_REQUEST)
-            recipient = get_object_or_404(User, username=username)
+            recipient = User.objects.filter(username=username).first()
+            if recipient is None:
+                return Response([])
         queryset = Notification.objects.select_related("recipient").filter(recipient=recipient)
         return Response(NotificationSerializer(queryset, many=True).data)
 

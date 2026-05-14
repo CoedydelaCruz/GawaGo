@@ -61,11 +61,12 @@ class RegisterView(APIView):
                 first_name=data.get("first_name", ""),
                 last_name=data.get("last_name", ""),
             )
-            user.is_active = False
-            user.save(update_fields=["is_active"])
-            UserProfile.objects.create(
+            profile = UserProfile.objects.create(
                 user=user,
                 role=data["role"],
+                phone=data.get("phone", ""),
+                bio=data.get("bio", ""),
+                years_experience=data.get("years_experience", 0),
                 skills=data.get("skills", []),
                 hourly_rate=data.get("hourly_rate"),
                 daily_rate=data.get("daily_rate"),
@@ -75,7 +76,18 @@ class RegisterView(APIView):
             )
             SignupVerificationRequest.create_request(user, token)
         return Response(
-            {"detail": "Account created. Verify your email to activate it.", "verification_code": token},
+            {
+                "detail": "Account created. You can now login.",
+                "verification_code": token,
+                "user": {
+                    "id": user.id,
+                    "username": user.username,
+                    "email": user.email,
+                    "first_name": user.first_name,
+                    "last_name": user.last_name,
+                },
+                "profile": UserProfileSerializer(profile).data,
+            },
             status=status.HTTP_201_CREATED,
         )
 
@@ -86,12 +98,18 @@ class LoginView(APIView):
     def post(self, request):
         serializer = LoginSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
+        username = serializer.validated_data["username"].strip()
+        password = serializer.validated_data["password"]
+        matched_user = User.objects.filter(username__iexact=username).first()
         user = authenticate(
             request,
-            username=serializer.validated_data["username"],
-            password=serializer.validated_data["password"],
+            username=matched_user.username if matched_user else username,
+            password=password,
         )
         if not user:
+            inactive_user = matched_user
+            if inactive_user and inactive_user.check_password(password) and not inactive_user.is_active:
+                return Response({"detail": "Account is not verified yet."}, status=status.HTTP_403_FORBIDDEN)
             return Response({"detail": "Invalid username or password."}, status=status.HTTP_400_BAD_REQUEST)
         if not user.is_active:
             return Response({"detail": "Account is not verified yet."}, status=status.HTTP_403_FORBIDDEN)
@@ -229,8 +247,18 @@ class MeProfileView(APIView):
             user.email = serializer.validated_data["email"].strip().lower()
         user.save()
 
-        for field in ["role", "skills", "hourly_rate", "daily_rate", "location_label", "latitude", "longitude"]:
+        for field in ["role", "phone", "bio", "years_experience", "skills", "hourly_rate", "daily_rate", "location_label", "latitude", "longitude"]:
             if field in serializer.validated_data:
                 setattr(profile, field, serializer.validated_data[field])
         profile.save()
-        return Response({"detail": "Profile updated.", "profile": UserProfileSerializer(profile).data})
+        return Response({
+            "detail": "Profile updated.",
+            "user": {
+                "id": user.id,
+                "username": user.username,
+                "email": user.email,
+                "first_name": user.first_name,
+                "last_name": user.last_name,
+            },
+            "profile": UserProfileSerializer(profile).data,
+        })
